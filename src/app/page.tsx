@@ -82,7 +82,7 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
              </div>
              <ResponsiveContainer width="100%" height={180}>
                <BarChart data={data.performance}>
-                 <XAxis dataKey="name" tick={{fontSize: 12, textTransform: 'capitalize'}} tickLine={false} axisLine={false} />
+                 <XAxis dataKey="name" tick={{fontSize: 12}} tickFormatter={(val) => val.charAt(0).toUpperCase() + val.slice(1)} tickLine={false} axisLine={false} />
                  <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                    {data.performance.map((entry: any, index: number) => (
