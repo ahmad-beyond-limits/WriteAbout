@@ -40,15 +40,9 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
     <div className="insights-wrapper">
        <nav className="top-nav" style={{justifyContent: 'space-between', padding: '1.5rem 3rem'}}>
          <div className="nav-title">Your Insights</div>
-         <div style={{display: 'flex', gap: '1.5rem', alignItems: 'center'}}>
-           <div className="filter-toggle">
-             <button className={`filter-btn ${filter === 'week' ? 'active' : ''}`} onClick={() => setFilter('week')}>Week</button>
-             <button className={`filter-btn ${filter === 'month' ? 'active' : ''}`} onClick={() => setFilter('month')}>Month</button>
-           </div>
-           <div style={{display: 'flex', gap: '1rem'}}>
-             <button className="btn-outline" onClick={onLogout} style={{padding: '10px 24px'}}>Logout</button>
-             <button className="btn-black" onClick={onPractice} style={{padding: '10px 24px'}}>Start Practicing</button>
-           </div>
+         <div style={{display: 'flex', gap: '1rem'}}>
+           <button className="btn-outline" onClick={onLogout} style={{padding: '10px 24px'}}>Logout</button>
+           <button className="btn-black" onClick={onPractice} style={{padding: '10px 24px'}}>Start Practicing</button>
          </div>
        </nav>
 
@@ -67,7 +61,7 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
 
            {/* API Usage */}
            <div className="dash-card">
-             <h3 className="dash-title">API Usage ({filter === 'week' ? 'Last 7 Days' : 'This Month'})</h3>
+             <h3 className="dash-title">API Usage (Last 7 Days)</h3>
              <ResponsiveContainer width="100%" height={180}>
                <BarChart data={data.apiUsage}>
                  <XAxis dataKey="name" tick={{fontSize: 12}} tickLine={false} axisLine={false} />
@@ -79,7 +73,13 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
 
            {/* Performance */}
            <div className="dash-card">
-             <h3 className="dash-title">Performance Breakdown</h3>
+             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+               <h3 className="dash-title" style={{margin: 0}}>Performance Breakdown</h3>
+               <div className="filter-toggle">
+                 <button className={`filter-btn ${filter === 'week' ? 'active' : ''}`} onClick={() => setFilter('week')}>Week</button>
+                 <button className={`filter-btn ${filter === 'month' ? 'active' : ''}`} onClick={() => setFilter('month')}>Month</button>
+               </div>
+             </div>
              <ResponsiveContainer width="100%" height={180}>
                <BarChart data={data.performance}>
                  <XAxis dataKey="name" tick={{fontSize: 12, textTransform: 'capitalize'}} tickLine={false} axisLine={false} />

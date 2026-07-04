@@ -12,12 +12,11 @@ export async function GET(request: Request) {
     // Delete API calls older than 1 week
     await pool.query(`DELETE FROM api_calls WHERE created_at < NOW() - INTERVAL '1 week'`);
 
-    // 2. Fetch API Usage Data
-    const daysInterval = filter === 'month' ? 29 : 6;
+    // 2. Fetch API Usage Data (strictly 7 days as older data is deleted)
     const apiUsageResult = await pool.query(`
       WITH days AS (
         SELECT generate_series(
-          date_trunc('day', NOW() - INTERVAL '${daysInterval} days'), 
+          date_trunc('day', NOW() - INTERVAL '6 days'), 
           date_trunc('day', NOW()), 
           '1 day'::interval
         ) AS day
