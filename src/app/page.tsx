@@ -245,6 +245,13 @@ export default function Home() {
   };
 
   const submitLog = async () => {
+    if (text.trim().length === 0) {
+      alert("Please write something to evaluate.");
+      setIsRunning(false);
+      setCurrentView('insights');
+      return;
+    }
+
     setIsRunning(false);
     setIsSubmitting(true);
     try {
