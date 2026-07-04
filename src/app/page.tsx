@@ -18,6 +18,7 @@ const RATE_COLORS = {
 };
 
 function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLogout: () => void }) {
+  const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState<'week' | 'month'>('week');
   const [reviewItem, setReviewItem] = useState<any>(null);
   
