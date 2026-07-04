@@ -18,13 +18,14 @@ const RATE_COLORS = {
 };
 
 function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLogout: () => void }) {
-  const [data, setData] = useState<any>(null);
+  const [filter, setFilter] = useState<'week' | 'month'>('week');
+  const [reviewItem, setReviewItem] = useState<any>(null);
   
   useEffect(() => {
-    fetch('/api/insights').then(r => r.json()).then(d => {
+    fetch(`/api/insights?filter=${filter}`).then(r => r.json()).then(d => {
       if (d.success) setData(d);
     });
-  }, []);
+  }, [filter]);
 
   if (!data) return (
     <div className="auth-container">
@@ -38,9 +39,15 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
     <div className="insights-wrapper">
        <nav className="top-nav" style={{justifyContent: 'space-between', padding: '1.5rem 3rem'}}>
          <div className="nav-title">Your Insights</div>
-         <div style={{display: 'flex', gap: '1rem'}}>
-           <button className="btn-outline" onClick={onLogout} style={{padding: '10px 24px'}}>Logout</button>
-           <button className="btn-black" onClick={onPractice} style={{padding: '10px 24px'}}>Start Practicing</button>
+         <div style={{display: 'flex', gap: '1.5rem', alignItems: 'center'}}>
+           <div className="filter-toggle">
+             <button className={`filter-btn ${filter === 'week' ? 'active' : ''}`} onClick={() => setFilter('week')}>Week</button>
+             <button className={`filter-btn ${filter === 'month' ? 'active' : ''}`} onClick={() => setFilter('month')}>Month</button>
+           </div>
+           <div style={{display: 'flex', gap: '1rem'}}>
+             <button className="btn-outline" onClick={onLogout} style={{padding: '10px 24px'}}>Logout</button>
+             <button className="btn-black" onClick={onPractice} style={{padding: '10px 24px'}}>Start Practicing</button>
+           </div>
          </div>
        </nav>
 
@@ -59,7 +66,7 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
 
            {/* API Usage */}
            <div className="dash-card">
-             <h3 className="dash-title">API Usage (Last 7 Days)</h3>
+             <h3 className="dash-title">API Usage ({filter === 'week' ? 'Last 7 Days' : 'This Month'})</h3>
              <ResponsiveContainer width="100%" height={180}>
                <BarChart data={data.apiUsage}>
                  <XAxis dataKey="name" tick={{fontSize: 12}} tickLine={false} axisLine={false} />
@@ -71,16 +78,17 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
 
            {/* Performance */}
            <div className="dash-card">
-             <h3 className="dash-title">Performance (This Month)</h3>
+             <h3 className="dash-title">Performance Breakdown</h3>
              <ResponsiveContainer width="100%" height={180}>
-               <PieChart>
-                 <Pie data={data.performance} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={40}>
+               <BarChart data={data.performance}>
+                 <XAxis dataKey="name" tick={{fontSize: 12, textTransform: 'capitalize'}} tickLine={false} axisLine={false} />
+                 <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                    {data.performance.map((entry: any, index: number) => (
-                     <Cell key={`cell-${index}`} fill={RATE_COLORS[entry.name as keyof typeof RATE_COLORS] || '#000'} />
+                     <Cell key={`cell-${index}`} fill={RATE_COLORS[entry.name as keyof typeof RATE_COLORS] || '#111'} />
                    ))}
-                 </Pie>
-                 <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
-               </PieChart>
+                 </Bar>
+               </BarChart>
              </ResponsiveContainer>
            </div>
          </div>
@@ -102,12 +110,40 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
                    </div>
                    <p className="history-feedback">{item.feedback}</p>
                    <div className="history-date">{item.date}</div>
+                   <div className="history-actions">
+                     <button className="btn-small-outline" onClick={() => setReviewItem(item)}>Review Feedback</button>
+                   </div>
                  </div>
                ))
              )}
            </div>
          </div>
-       </div>
+        </div>
+
+        {/* Review Modal */}
+        <div className={`analysis-overlay ${reviewItem !== null ? 'active' : ''}`}>
+          {reviewItem && (
+            <div className="analysis-card slide-up">
+              <h2 className="analysis-title">Practice #{reviewItem.id}</h2>
+              <div className="metric-val" style={{color: RATE_COLORS[reviewItem.rate as keyof typeof RATE_COLORS], marginBottom: '1rem'}}>{reviewItem.rate.toUpperCase()}</div>
+              <p className="feedback-text">{reviewItem.feedback}</p>
+              
+              <div style={{display: 'flex', gap: '1rem', width: '100%', marginTop: '1.5rem'}}>
+                 <button className="btn-outline" style={{flex: 1}} onClick={() => setReviewItem(null)}>
+                   Cancel
+                 </button>
+                 <button className="btn-black" style={{flex: 1}} onClick={() => {
+                   onPractice();
+                   // Need to trigger a special event or pass state to reload this specific image.
+                   // A simple dispatch can work, or we call onPractice with the image URL.
+                   window.dispatchEvent(new CustomEvent('practice-again', { detail: reviewItem.image_url }));
+                 }}>
+                   Practice Again
+                 </button>
+              </div>
+            </div>
+          )}
+        </div>
     </div>
   )
 }
@@ -129,6 +165,18 @@ export default function Home() {
   const [imageUrl, setImageUrl] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisResult>(null);
   const [usedImageIds, setUsedImageIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    const handlePracticeAgain = (e: any) => {
+      setImageUrl(e.detail);
+      setText('');
+      setTimeLeft(TOTAL_TIME);
+      setAnalysis(null);
+      setIsRunning(true);
+    };
+    window.addEventListener('practice-again', handlePracticeAgain);
+    return () => window.removeEventListener('practice-again', handlePracticeAgain);
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;

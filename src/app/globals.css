@@ -19,7 +19,6 @@ body {
   margin: 0;
   height: 100vh;
   width: 100vw;
-  overflow: hidden; /* Hide scrollbars on desktop */
   background: linear-gradient(135deg, #f6f7fa 0%, #e7e5fc 100%);
   display: flex;
   flex-direction: column; /* Stack nav and main content */
@@ -419,6 +418,7 @@ body::before {
   background: var(--background);
   display: flex;
   flex-direction: column;
+  overflow-y: auto; /* Allow dashboard to scroll */
 }
 
 .insights-content {
@@ -543,4 +543,54 @@ body::before {
   padding: 3rem;
   color: #999;
   font-style: italic;
+}
+
+/* Filter Toggle */
+.filter-toggle {
+  display: flex;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.filter-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-btn.active {
+  background: white;
+  color: var(--text-dark);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* History Review Button */
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.btn-small-outline {
+  border: 1px solid #ddd;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-small-outline:hover {
+  background: #f9f9f9;
+  border-color: #ccc;
 }
