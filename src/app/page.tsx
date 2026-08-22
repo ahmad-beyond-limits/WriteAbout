@@ -201,19 +201,19 @@ export default function Home() {
       return;
     }
     if (!apiKey.trim()) {
-      setAuthStatus('Please enter a Cerebras API key.');
+      setAuthStatus('Please enter a Groq API key.');
       return;
     }
     
     setIsLoadingAuth(true);
     try {
-      const res = await fetch('https://api.cerebras.ai/v1/models', {
+      const res = await fetch('https://api.groq.com/openai/v1/models', {
         headers: { 'Authorization': `Bearer ${apiKey}` }
       });
       if (res.ok) {
         setCurrentView('insights');
       } else {
-        setAuthStatus('Invalid Cerebras API Key.');
+        setAuthStatus('Invalid Groq API Key.');
       }
     } catch (e) {
       setAuthStatus('Error verifying API Key. Check your connection.');
@@ -290,13 +290,13 @@ export default function Home() {
           </div>
 
           <div style={{marginBottom: '2rem', textAlign: 'left'}}>
-            <label className="auth-label">Cerebras API Key</label>
+            <label className="auth-label">Groq API Key</label>
             <input 
               type="text" 
               className="auth-input"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-..."
+              placeholder="gsk_..."
             />
           </div>
 

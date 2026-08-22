@@ -1,17 +1,17 @@
 # WriteAbout
 
-> A dynamic, timed image-description practice application designed to test and improve your descriptive fluency, powered by Cerebras AI.
+> A dynamic, timed image-description practice application designed to test and improve your descriptive fluency, powered by Groq.
 
 ---
 
 ## Executive Summary
-**WriteAbout** is an interactive web application built to enhance creative writing and observational skills. Users are presented with a random, high-quality image and given exactly 60 seconds to write a detailed, compelling description. Upon submission, the text is evaluated by Cerebras AI, scoring the user's performance and providing actionable, real-time feedback. 
+**WriteAbout** is an interactive web application built to enhance creative writing and observational skills. Users are presented with a random, high-quality image and given exactly 60 seconds to write a detailed, compelling description. Upon submission, the text is evaluated by Groq, scoring the user's performance and providing actionable, real-time feedback. 
 
 To help users track their growth, WriteAbout includes a fully functional **Insights Dashboard** that beautifully visualizes API usage and historical performance trends over time using modern data visualization techniques.
 
 ## Key Features
 - **Timed Challenges**: A strict 60-second countdown timer pushes users to think quickly and write efficiently.
-- **AI-Powered Feedback**: Integrates securely with the Cerebras AI API to grade submissions (Low, Medium, Good, High, Excellent) and provide concise feedback (100-150 tokens max).
+- **AI-Powered Feedback**: Integrates securely with the Groq API to grade submissions (Low, Medium, Good, High, Excellent) and provide concise feedback (100-150 tokens max).
 - **Interactive Insights Dashboard**: Features beautiful, responsive charts (via Recharts) displaying 7-day API usage and a monthly performance breakdown.
 - **Automated Data Sweeping**: Built-in data retention logic automatically cleans the Postgres database (deleting practices older than 1 month and API logs older than 1 week) to maintain optimal performance and storage.
 - **Premium Glassmorphism Design**: A stunning, modern UI built with custom CSS, featuring pastel gradients, soft shadows, and fully responsive layouts.
@@ -20,7 +20,7 @@ To help users track their growth, WriteAbout includes a fully functional **Insig
 - **Frontend**: Next.js 14, React, Recharts
 - **Styling**: Vanilla CSS (Custom Glassmorphism Design System)
 - **Database**: Postgres (Neon integration)
-- **AI Integration**: Cerebras API (`https://api.cerebras.ai/v1/models`)
+- **AI Integration**: Groq API (`https://api.groq.com/openai/v1/models`)
 
 ---
 
@@ -37,8 +37,8 @@ WriteAbout is built on Next.js, meaning it is perfectly optimized for one-click 
 2. Import your GitHub repository.
 3. In the **Environment Variables** section during setup, reference your `.env.example` and add the following variables:
    - `NEXT_PUBLIC_APP_PASSWORD`: (Choose your secure login password)
-   - `CEREBRAS_API_KEY`: (Your Cerebras AI API key)
-   - `CEREBRAS_MODEL_NAME`: gemma-4-31b
+   - `GROQ_API_KEY`: (Your Groq API key)
+   - `GROQ_MODEL_NAME`: qwen/qwen3.6-27b
 4. Click **Deploy**.
 
 ### Step 3: Setup the Neon Postgres Database

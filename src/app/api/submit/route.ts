@@ -9,8 +9,8 @@ export async function POST(request: Request) {
     const { text, image, timeLeft, apiKey } = data;
 
     // Use provided apiKey or fallback to env
-    const cerebrasKey = apiKey || process.env.CEREBRAS_API_KEY;
-    if (!cerebrasKey) {
+    const groqKey = apiKey || process.env.GROQ_API_KEY;
+    if (!groqKey) {
       return NextResponse.json({ success: false, error: 'No API Key provided' }, { status: 400 });
     }
 
@@ -23,13 +23,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 
-    const modelName = process.env.CEREBRAS_MODEL_NAME || 'llama3.1-70b';
+    const modelName = process.env.GROQ_MODEL_NAME || 'qwen/qwen3.6-27b';
 
-    // Make request to Cerebras
-    const cerebrasRes = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+    // Make request to Groq
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${cerebrasKey}`,
+        'Authorization': `Bearer ${groqKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -42,14 +42,14 @@ export async function POST(request: Request) {
       })
     });
 
-    if (!cerebrasRes.ok) {
-      const errorText = await cerebrasRes.text();
-      console.error('Cerebras API Error:', errorText);
-      return NextResponse.json({ success: false, error: 'Cerebras API Error' }, { status: 500 });
+    if (!groqRes.ok) {
+      const errorText = await groqRes.text();
+      console.error('Groq API Error:', errorText);
+      return NextResponse.json({ success: false, error: 'Groq API Error' }, { status: 500 });
     }
 
-    const cerebrasData = await cerebrasRes.json();
-    let rawResponse = cerebrasData.choices[0].message.content;
+    const groqData = await groqRes.json();
+    let rawResponse = groqData.choices[0].message.content;
 
     // Parse JSON from LLM
     let parsedData = { rating: 'low', feedback: 'Failed to parse AI response.' };
