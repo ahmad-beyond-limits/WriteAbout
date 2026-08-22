@@ -5,6 +5,11 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'week'; // default to week
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+    }
 
     // 1. Sweep Clean (Data Retention Logic)
     // Delete practices older than 1 month
@@ -25,19 +30,19 @@ export async function GET(request: Request) {
         to_char(days.day, 'Mon DD') AS name,
         COUNT(a.id) AS calls
       FROM days
-      LEFT JOIN api_calls a ON date_trunc('day', a.created_at) = days.day
+      LEFT JOIN api_calls a ON date_trunc('day', a.created_at) = days.day AND a.user_id = $1
       GROUP BY days.day
       ORDER BY days.day;
-    `);
+    `, [userId]);
 
     // 3. Fetch Performance Breakdown (Group by rate)
     const intervalStr = filter === 'month' ? '1 month' : '1 week';
     const performanceResult = await pool.query(`
       SELECT rate AS name, COUNT(*) AS value
       FROM practices
-      WHERE created_at >= NOW() - INTERVAL '${intervalStr}'
+      WHERE created_at >= NOW() - INTERVAL '${intervalStr}' AND user_id = $1
       GROUP BY rate;
-    `);
+    `, [userId]);
 
     // Ensure all rates are present for the Bar Chart
     const rates = ['low', 'medium', 'good', 'high', 'excellent'];
@@ -50,10 +55,10 @@ export async function GET(request: Request) {
     const historyResult = await pool.query(`
       SELECT id, rate, feedback, image_url, text, to_char(created_at, 'Mon DD, YYYY') as date
       FROM practices
-      WHERE created_at >= NOW() - INTERVAL '${intervalStr}'
+      WHERE created_at >= NOW() - INTERVAL '${intervalStr}' AND user_id = $1
       ORDER BY created_at DESC
       LIMIT 20;
-    `);
+    `, [userId]);
 
     return NextResponse.json({
       success: true,

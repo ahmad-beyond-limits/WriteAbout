@@ -6,7 +6,11 @@ import path from 'path';
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const { text, image, timeLeft, apiKey } = data;
+    const { text, image, timeLeft, apiKey, userId } = data;
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+    }
 
     // Use provided apiKey or fallback to env
     const groqKey = apiKey || process.env.GROQ_API_KEY;
@@ -87,14 +91,14 @@ export async function POST(request: Request) {
     // Insert into Postgres
     try {
       await pool.query(
-        'INSERT INTO practices (image_url, text, rate, feedback) VALUES ($1, $2, $3, $4)',
-        [image, text, rate, feedback]
+        'INSERT INTO practices (image_url, text, rate, feedback, user_id) VALUES ($1, $2, $3, $4, $5)',
+        [image, text, rate, feedback, userId]
       );
 
       // Log the API call
       await pool.query(
-        'INSERT INTO api_calls (endpoint) VALUES ($1)',
-        ['/api/submit']
+        'INSERT INTO api_calls (endpoint, user_id) VALUES ($1, $2)',
+        ['/api/submit', userId]
       );
     } catch (dbError) {
       console.error('Database insertion error:', dbError);

@@ -17,16 +17,16 @@ const RATE_COLORS = {
   'excellent': '#10b981'
 };
 
-function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLogout: () => void }) {
+function InsightsScreen({ onPractice, onLogout, userId }: { onPractice: () => void, onLogout: () => void, userId: number }) {
   const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState<'week' | 'month'>('week');
   const [reviewItem, setReviewItem] = useState<any>(null);
   
   useEffect(() => {
-    fetch(`/api/insights?filter=${filter}`).then(r => r.json()).then(d => {
+    fetch(`/api/insights?filter=${filter}&userId=${userId}`).then(r => r.json()).then(d => {
       if (d.success) setData(d);
     });
-  }, [filter]);
+  }, [filter, userId]);
 
   if (!data) return (
     <div className="auth-container">
@@ -48,16 +48,18 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
 
        <div className="insights-content">
          <div className="dashboard-grid">
-           {/* API Limits */}
-           <div className="dash-card limits-card">
-             <h3 className="dash-title">API Limits</h3>
-             <ul className="limits-list">
-               <li><span className="limit-val">5</span> calls per minute</li>
-               <li><span className="limit-val">150</span> calls per hour</li>
-               <li><span className="limit-val">2400</span> calls per day</li>
-               <li><span className="limit-val">60k</span> max context length</li>
-             </ul>
-           </div>
+            {/* API Limits */}
+            <div className="dash-card limits-card">
+              <h3 className="dash-title">API Limits</h3>
+              <ul className="limits-list" style={{ gap: '8px' }}>
+                <li style={{ fontWeight: '600', color: 'var(--text-dark)', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px', marginBottom: '2px' }}>Requests</li>
+                <li><span className="limit-val" style={{ width: '60px' }}>30</span> / minute</li>
+                <li><span className="limit-val" style={{ width: '60px' }}>1K</span> / day</li>
+                <li style={{ fontWeight: '600', color: 'var(--text-dark)', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '2px' }}>Tokens</li>
+                <li><span className="limit-val" style={{ width: '60px' }}>8K</span> / minute</li>
+                <li><span className="limit-val" style={{ width: '60px' }}>200K</span> / day</li>
+              </ul>
+            </div>
 
            {/* API Usage */}
            <div className="dash-card">
@@ -152,11 +154,14 @@ function InsightsScreen({ onPractice, onLogout }: { onPractice: () => void, onLo
 export default function Home() {
   const TOTAL_TIME = 60;
   
-  const [currentView, setCurrentView] = useState<'login' | 'insights' | 'practice'>('login');
+  const [currentView, setCurrentView] = useState<'login' | 'apikey' | 'insights' | 'practice'>('login');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [authStatus, setAuthStatus] = useState('');
   const [isLoadingAuth, setIsLoadingAuth] = useState(false);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [user, setUser] = useState<{ id: number; username: string } | null>(null);
 
   // Practice State
   const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
@@ -166,6 +171,22 @@ export default function Home() {
   const [imageUrl, setImageUrl] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisResult>(null);
   const [usedImageIds, setUsedImageIds] = useState<number[]>([]);
+
+  // Session recovery on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('writeabout_user');
+    const storedApiKey = localStorage.getItem('writeabout_apikey');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      if (storedApiKey) {
+        setApiKey(storedApiKey);
+        setCurrentView('insights');
+      } else {
+        setCurrentView('apikey');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const handlePracticeAgain = (e: any) => {
@@ -192,28 +213,96 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [isRunning, timeLeft]);
 
-  const handleLogin = async () => {
+  const handleLoginSubmit = async () => {
     setAuthStatus('');
-    const correctPassword = process.env.NEXT_PUBLIC_APP_PASSWORD || 'ahmad-beyond-limits-123';
-    
-    if (password !== correctPassword) {
-      setAuthStatus('Incorrect password.');
+    if (!username.trim() || !password.trim()) {
+      setAuthStatus('Username and password are required.');
       return;
     }
+    setIsLoadingAuth(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUser(data.user);
+        localStorage.setItem('writeabout_user', JSON.stringify(data.user));
+        if (data.apiKey) {
+          setApiKey(data.apiKey);
+          localStorage.setItem('writeabout_apikey', data.apiKey);
+          setCurrentView('insights');
+        } else {
+          setApiKey('');
+          setCurrentView('apikey');
+        }
+      } else {
+        setAuthStatus(data.error || 'Login failed.');
+      }
+    } catch (e) {
+      setAuthStatus('Error logging in. Check connection.');
+    }
+    setIsLoadingAuth(false);
+  };
+
+  const handleRegisterSubmit = async () => {
+    setAuthStatus('');
+    if (!username.trim() || !password.trim()) {
+      setAuthStatus('Username and password are required.');
+      return;
+    }
+    setIsLoadingAuth(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUser(data.user);
+        localStorage.setItem('writeabout_user', JSON.stringify(data.user));
+        setApiKey('');
+        setCurrentView('apikey');
+      } else {
+        setAuthStatus(data.error || 'Registration failed.');
+      }
+    } catch (e) {
+      setAuthStatus('Error registering. Check connection.');
+    }
+    setIsLoadingAuth(false);
+  };
+
+  const handleApiKeyVerify = async () => {
+    setAuthStatus('');
     if (!apiKey.trim()) {
       setAuthStatus('Please enter a Groq API key.');
       return;
     }
-    
     setIsLoadingAuth(true);
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/models', {
-        headers: { 'Authorization': `Bearer ${apiKey}` }
+      const verifyRes = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${apiKey.trim()}` }
       });
-      if (res.ok) {
+      if (!verifyRes.ok) {
+        setAuthStatus('Invalid Groq API Key.');
+        setIsLoadingAuth(false);
+        return;
+      }
+
+      const saveRes = await fetch('/api/auth/save-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, apiKey: apiKey.trim() })
+      });
+      const saveData = await saveRes.json();
+      if (saveRes.ok && saveData.success) {
+        localStorage.setItem('writeabout_apikey', apiKey.trim());
         setCurrentView('insights');
       } else {
-        setAuthStatus('Invalid Groq API Key.');
+        setAuthStatus(saveData.error || 'Failed to save API key.');
       }
     } catch (e) {
       setAuthStatus('Error verifying API Key. Check your connection.');
@@ -222,9 +311,14 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    setCurrentView('login');
+    localStorage.removeItem('writeabout_user');
+    localStorage.removeItem('writeabout_apikey');
+    setUser(null);
+    setApiKey('');
     setPassword('');
+    setUsername('');
     setAuthStatus('');
+    setCurrentView('login');
   };
 
   const handleStartPractice = () => {
@@ -258,7 +352,7 @@ export default function Home() {
       const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, image: imageUrl, timeLeft, apiKey }),
+        body: JSON.stringify({ text, image: imageUrl, timeLeft, apiKey, userId: user?.id }),
       });
       const data = await res.json();
       if (res.ok && data.analysis) {
@@ -277,7 +371,21 @@ export default function Home() {
       <div className="auth-container">
         <div className="auth-card">
           <div className="nav-title" style={{textAlign: 'center', marginBottom: '2rem'}}>WriteAbout</div>
+          <h3 style={{ textAlign: 'center', marginBottom: '1.5rem', fontSize: '18px', fontWeight: '600' }}>
+            {isRegisterMode ? 'Create Account' : 'Sign In'}
+          </h3>
           
+          <div style={{marginBottom: '1.2rem', textAlign: 'left'}}>
+            <label className="auth-label">Username</label>
+            <input 
+              type="text" 
+              className="auth-input" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter username"
+            />
+          </div>
+
           <div style={{marginBottom: '1.5rem', textAlign: 'left'}}>
             <label className="auth-label">Password</label>
             <input 
@@ -289,6 +397,47 @@ export default function Home() {
             />
           </div>
 
+          {authStatus && <div className="auth-error">{authStatus}</div>}
+
+          <button 
+            className="btn-black auth-btn" 
+            onClick={isRegisterMode ? handleRegisterSubmit : handleLoginSubmit} 
+            disabled={isLoadingAuth}
+            style={{ width: '100%', marginBottom: '1rem' }}
+          >
+            {isLoadingAuth ? 'Please wait...' : (isRegisterMode ? 'Register' : 'Login')}
+          </button>
+
+          <div style={{ textAlign: 'center', fontSize: '14px', color: '#666' }}>
+            {isRegisterMode ? 'Already have an account?' : "Don't have an account?"} {' '}
+            <button 
+              style={{ background: 'none', border: 'none', color: '#111', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+              onClick={() => {
+                setIsRegisterMode(!isRegisterMode);
+                setAuthStatus('');
+              }}
+            >
+              {isRegisterMode ? 'Sign In' : 'Register Now'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'apikey') {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="nav-title" style={{textAlign: 'center', marginBottom: '1.5rem'}}>WriteAbout</div>
+          
+          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <p style={{ margin: 0, fontSize: '16px', fontWeight: '500', color: '#333' }}>Welcome, {user?.username}!</p>
+            <p style={{ margin: '0.2rem 0 0 0', fontSize: '13px', color: '#666' }}>
+              Configure your Groq API Key to start practicing.
+            </p>
+          </div>
+
           <div style={{marginBottom: '2rem', textAlign: 'left'}}>
             <label className="auth-label">Groq API Key</label>
             <input 
@@ -298,20 +447,43 @@ export default function Home() {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="gsk_..."
             />
+            {apiKey.startsWith('gsk_') && (
+              <span style={{ fontSize: '11px', color: 'green', display: 'block', marginTop: '0.3rem' }}>
+                ✓ Found key saved in your secure profile
+              </span>
+            )}
           </div>
 
           {authStatus && <div className="auth-error">{authStatus}</div>}
 
-          <button className="btn-black auth-btn" onClick={handleLogin} disabled={isLoadingAuth}>
-            {isLoadingAuth ? 'Verifying...' : 'Start'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <button 
+              className="btn-outline" 
+              onClick={() => {
+                setUser(null);
+                setApiKey('');
+                setCurrentView('login');
+              }}
+              style={{ flex: 1 }}
+            >
+              Back
+            </button>
+            <button 
+              className="btn-black" 
+              onClick={handleApiKeyVerify} 
+              disabled={isLoadingAuth}
+              style={{ flex: 2 }}
+            >
+              {isLoadingAuth ? 'Verifying...' : 'Verify & Start'}
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   if (currentView === 'insights') {
-    return <InsightsScreen onPractice={handleStartPractice} onLogout={handleLogout} />;
+    return <InsightsScreen onPractice={handleStartPractice} onLogout={handleLogout} userId={user?.id || 0} />;
   }
 
   const isUrgent = timeLeft <= 10;
