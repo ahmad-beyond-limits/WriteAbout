@@ -38,7 +38,8 @@ export async function POST(request: Request) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Please evaluate this description of the image:\n\n"${text}"` }
         ],
-        temperature: 0.2
+        temperature: 0.2,
+        max_completion_tokens: 2048
       })
     });
 
@@ -61,7 +62,20 @@ export async function POST(request: Request) {
       parsedData = JSON.parse(rawResponse);
     } catch (e) {
       console.error('Failed to parse LLM JSON:', rawResponse);
-      // Fallback fallback
+      
+      // Robust regex-based fallback parsing in case of truncation or minor syntax errors
+      const ratingMatch = rawResponse.match(/"rating"\s*:\s*"([^"]+)"/i);
+      const feedbackMatch = rawResponse.match(/"feedback"\s*:\s*"([\s\S]*?)(?:"|$)/i);
+      
+      if (ratingMatch) {
+        parsedData.rating = ratingMatch[1];
+      }
+      if (feedbackMatch) {
+        let fb = feedbackMatch[1].trim();
+        // Clean up trailing JSON syntax if it was partially cut off
+        fb = fb.replace(/"\s*}\s*$/, '').replace(/"$/, '').trim();
+        parsedData.feedback = fb || 'Failed to parse AI response.';
+      }
     }
 
     // Ensure valid rating
