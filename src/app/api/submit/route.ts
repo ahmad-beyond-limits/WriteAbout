@@ -54,6 +54,8 @@ export async function POST(request: Request) {
     // Parse JSON from LLM
     let parsedData = { rating: 'low', feedback: 'Failed to parse AI response.' };
     try {
+      // Remove <think>...</think> tags if present (e.g. from reasoning models)
+      rawResponse = rawResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       // Clean up markdown block if present
       rawResponse = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
       parsedData = JSON.parse(rawResponse);
