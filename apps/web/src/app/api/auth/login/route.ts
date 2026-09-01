@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     // Fetch user from DB
     const userResult = await pool.query(
-      'SELECT id, username, password_hash, salt, api_key FROM users WHERE username = $1',
+      'SELECT id, username, password_hash, salt, api_key, role FROM users WHERE LOWER(username) = LOWER($1)',
       [trimmedUsername]
     );
 
@@ -37,11 +37,14 @@ export async function POST(request: Request) {
       decryptedKey = decryptApiKey(user.api_key);
     }
 
+    const userRole = user.role || (user.username?.toLowerCase() === 'muhammad ahmad' ? 'admin' : 'user');
+
     return NextResponse.json({
       success: true,
       user: {
         id: user.id,
-        username: user.username
+        username: user.username,
+        role: userRole
       },
       apiKey: decryptedKey
     });

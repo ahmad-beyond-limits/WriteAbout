@@ -116,7 +116,7 @@ const GOLD_5_BARS = ['#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706'];
 
 export default function HubPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ id: number; username: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; role?: string } | null>(null);
   const [typingTests, setTypingTests] = useState<TypingTestItem[]>([]);
   const [practices, setPractices] = useState<PracticeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -338,6 +338,18 @@ export default function HubPage() {
           </Link>
 
           <div className="flex items-center gap-2">
+            {(user?.role === 'admin' || user?.username?.toLowerCase() === 'muhammad ahmad') && (
+              <Link
+                href="/admin"
+                className="px-3 py-1.5 rounded-xl bg-[#faedd0] hover:bg-[#f3dfb5] text-[#855307] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 border border-[#e9cf97] transition-all shadow-xs"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span>Admin Portal</span>
+              </Link>
+            )}
+
             <button
               onClick={handleLogout}
               title="Sign Out"

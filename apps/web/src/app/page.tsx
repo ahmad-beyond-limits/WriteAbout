@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function LandingPage() {
-  const [user, setUser] = useState<{ id: number; username: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; role?: string } | null>(null);
   const [showMobileNotice, setShowMobileNotice] = useState(false);
 
   useEffect(() => {
@@ -74,13 +74,23 @@ export default function LandingPage() {
             </Link>
             <span className="hidden md:block w-px h-3.5 bg-[#dbe5da]" />
             {user ? (
-              <Link
-                href="/hub"
-                className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#28442c] hover:bg-[#1f3723] text-[#f2f7f2] font-mono font-semibold text-[11px] sm:text-xs uppercase tracking-wider transition-all shadow-[0_4px_12px_rgba(40,68,44,0.18)] flex items-center gap-1.5 shrink-0"
-              >
-                <span>Workspace Hub</span>
-                <span className="text-xs sm:text-sm">→</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                {(user.role === 'admin' || user.username?.toLowerCase() === 'muhammad ahmad') && (
+                  <Link
+                    href="/admin"
+                    className="px-3 py-1.5 rounded-full bg-[#faedd0] hover:bg-[#f3dfb5] text-[#855307] font-mono font-semibold text-[11px] sm:text-xs uppercase tracking-wider transition-all border border-[#e9cf97] shadow-xs flex items-center gap-1 shrink-0"
+                  >
+                    <span>Admin</span>
+                  </Link>
+                )}
+                <Link
+                  href="/hub"
+                  className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-[#28442c] hover:bg-[#1f3723] text-[#f2f7f2] font-mono font-semibold text-[11px] sm:text-xs uppercase tracking-wider transition-all shadow-[0_4px_12px_rgba(40,68,44,0.18)] flex items-center gap-1.5 shrink-0"
+                >
+                  <span>Workspace Hub</span>
+                  <span className="text-xs sm:text-sm">→</span>
+                </Link>
+              </div>
             ) : (
               <div className="flex items-center gap-2 sm:gap-3">
                 <Link

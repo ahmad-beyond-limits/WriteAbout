@@ -25,8 +25,8 @@ export async function POST(request: Request) {
 
     // Insert user into DB
     const insertResult = await pool.query(
-      'INSERT INTO users (username, password_hash, salt) VALUES ($1, $2, $3) RETURNING id, username',
-      [trimmedUsername, passwordHash, salt]
+      'INSERT INTO users (username, password_hash, salt, role) VALUES ($1, $2, $3, $4) RETURNING id, username, role',
+      [trimmedUsername, passwordHash, salt, 'user']
     );
 
     const newUser = insertResult.rows[0];
@@ -35,7 +35,8 @@ export async function POST(request: Request) {
       success: true,
       user: {
         id: newUser.id,
-        username: newUser.username
+        username: newUser.username,
+        role: newUser.role || 'user'
       }
     }, { status: 201 });
 

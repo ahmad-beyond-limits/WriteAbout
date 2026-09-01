@@ -52,12 +52,16 @@ function InsightsScreen({
   onPractice,
   onLogout,
   onConfigureKey,
-  userId
+  userId,
+  role,
+  username
 }: {
   onPractice: () => void;
   onLogout: () => void;
   onConfigureKey?: () => void;
   userId: number;
+  role?: string;
+  username?: string;
 }) {
   const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState<'week' | 'month'>('week');
@@ -144,6 +148,19 @@ function InsightsScreen({
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+          {(role === 'admin' || username?.toLowerCase() === 'muhammad ahmad') && (
+            <Link
+              href="/admin"
+              className="btn-modern-outline"
+              style={{ padding: '8px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', background: '#faedd0', color: '#784805', borderColor: '#e9cf97' }}
+              title="Administrator Portal"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              Admin
+            </Link>
+          )}
           {onConfigureKey && (
             <button
               className="btn-modern-outline"
@@ -573,7 +590,7 @@ function InsightsScreen({
 
 export default function WriteAboutApp() {
   const TOTAL_TIME = 60;
-  const [user, setUser] = useState<{ id: number; username: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; role?: string } | null>(null);
   const [currentView, setCurrentView] = useState<'apikey' | 'insights' | 'practice'>('apikey');
   const [apiKey, setApiKey] = useState('');
   const [authStatus, setAuthStatus] = useState('');
@@ -909,6 +926,8 @@ export default function WriteAboutApp() {
           onLogout={handleLogout}
           onConfigureKey={() => setCurrentView('apikey')}
           userId={user.id}
+          role={user.role}
+          username={user.username}
         />
 
         {showMobileNotice && (
