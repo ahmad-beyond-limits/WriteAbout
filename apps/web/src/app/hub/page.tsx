@@ -121,6 +121,7 @@ export default function HubPage() {
   const [practices, setPractices] = useState<PracticeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showRankInfo, setShowRankInfo] = useState(false);
+  const [showMobileNotice, setShowMobileNotice] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('writeabout_user');
@@ -163,28 +164,30 @@ export default function HubPage() {
     router.push('/login');
   };
 
-  // ── Statistical & Mathematical Personality Formulation ──
-  const profile: PersonalityProfile = useMemo(() => {
-    // 1. Typing Metrics
-    const avgWpm =
-      typingTests.length > 0
-        ? typingTests.reduce((acc, curr) => acc + (curr.wpm || 0), 0) / typingTests.length
-        : 45;
-    const avgAccuracy =
-      typingTests.length > 0
-        ? typingTests.reduce((acc, curr) => acc + (curr.accuracy || 0), 0) / typingTests.length
-        : 95;
-    const avgConsistency =
-      typingTests.length > 0
-        ? typingTests.reduce((acc, curr) => acc + (curr.consistency || 0), 0) / typingTests.length
-        : 75;
+  const handleWriteAboutClick = (e: React.MouseEvent) => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      e.preventDefault();
+      setShowMobileNotice(true);
+    }
+  };
 
-    // 2. Writing Metrics
+  // ── Statistical & Mathematical Personality Formulation (100% Database Telemetry) ──
+  const profile: PersonalityProfile = useMemo(() => {
+    const hasTyping = typingTests.length > 0;
+    const hasPractices = practices.length > 0;
+
+    // 1. Typing Metrics (Direct from PostgreSQL tests table)
+    const validWpms = typingTests.map((t) => t.wpm || 0).filter((w) => w > 0);
+    const avgWpm = hasTyping && validWpms.length > 0 ? validWpms.reduce((a, b) => a + b, 0) / validWpms.length : 0;
+    const avgAccuracy = hasTyping ? typingTests.reduce((acc, curr) => acc + (curr.accuracy || 0), 0) / typingTests.length : 0;
+    const avgConsistency = hasTyping ? typingTests.reduce((acc, curr) => acc + (curr.consistency || 0), 0) / typingTests.length : 0;
+
+    // 2. Writing Metrics (Direct from PostgreSQL practices table)
     let totalWords = 0;
     let totalSentences = 0;
     let rateScoreSum = 0;
 
-    if (practices.length > 0) {
+    if (hasPractices) {
       practices.forEach((p) => {
         const words = p.text ? p.text.trim().split(/\s+/).filter(Boolean).length : 0;
         const sents = p.text ? Math.max(1, (p.text.match(/[^.!?]+[.!?]+/g) || [p.text]).length) : 1;
@@ -194,35 +197,36 @@ export default function HubPage() {
       });
     }
 
-    const avgWordsPerSession = practices.length > 0 ? totalWords / practices.length : 28;
-    const avgSentencesPerSession = practices.length > 0 ? totalSentences / practices.length : 2.5;
-    const avgWritingQuality = practices.length > 0 ? rateScoreSum / practices.length : 3.8;
+    const avgWordsPerSession = hasPractices ? totalWords / practices.length : 0;
+    const avgSentencesPerSession = hasPractices ? totalSentences / practices.length : 0;
+    const avgWritingQuality = hasPractices ? rateScoreSum / practices.length : 1.0;
 
     // 3. Mathematical Dimensions (Normalized 1.0 - 5.0)
-    // Point 1: Kinetic Velocity (Raw typing pace vs 60 WPM benchmark)
-    const p1_velocity = Math.min(5.0, Math.max(1.0, 1.0 + (avgWpm / 60) * 4.0));
+    // Point 1: Kinetic Velocity (Raw typing pace vs 70 WPM benchmark)
+    const p1_velocity = hasTyping
+      ? Math.min(5.0, Math.max(1.0, 1.0 + (avgWpm / 70) * 4.0))
+      : 1.0;
 
     // Point 2: Lexical Richness (Vocabulary depth & word length)
-    const p2_lexical = Math.min(
-      5.0,
-      Math.max(1.0, 0.6 * avgWritingQuality + 0.4 * Math.min(5.0, (avgWordsPerSession / 30) * 4.0 + 1.0))
-    );
+    const p2_lexical = hasPractices
+      ? Math.min(5.0, Math.max(1.0, 0.6 * avgWritingQuality + 0.4 * Math.min(5.0, (avgWordsPerSession / 35) * 4.0 + 1.0)))
+      : 1.0;
 
     // Point 3: Syntactic Cadence (Sentence rhythm & clause variance)
-    const wordsPerSentenceRatio = avgSentencesPerSession > 0 ? avgWordsPerSession / avgSentencesPerSession : 10;
-    const p3_syntactic = Math.min(
-      5.0,
-      Math.max(1.0, 0.5 * avgWritingQuality + 0.5 * Math.min(5.0, (wordsPerSentenceRatio / 12) * 3.5 + 1.5))
-    );
+    const wordsPerSentenceRatio = avgSentencesPerSession > 0 ? avgWordsPerSession / avgSentencesPerSession : 0;
+    const p3_syntactic = hasPractices
+      ? Math.min(5.0, Math.max(1.0, 0.5 * avgWritingQuality + 0.5 * Math.min(5.0, (wordsPerSentenceRatio / 12) * 3.5 + 1.0)))
+      : 1.0;
 
     // Point 4: Contextual Alignment (Visual grounding & prompt synthesis)
-    const p4_context = Math.min(
-      5.0,
-      Math.max(1.0, 0.7 * avgWritingQuality + 0.3 * (practices.length >= 3 ? 4.5 : 3.2))
-    );
+    const p4_context = hasPractices
+      ? Math.min(5.0, Math.max(1.0, 0.7 * avgWritingQuality + 0.3 * (practices.length >= 3 ? 4.5 : 2.5)))
+      : 1.0;
 
     // Point 5: Typographic Precision (Accuracy & Keystroke Reliability)
-    const p5_precision = Math.min(5.0, Math.max(1.0, (avgAccuracy / 100) * 4.5 + (avgConsistency / 100) * 0.5));
+    const p5_precision = hasTyping
+      ? Math.min(5.0, Math.max(1.0, (avgAccuracy / 100) * 4.0 + (avgConsistency / 100) * 1.0))
+      : 1.0;
 
     // 4. Composite Cognitive Score (Weighted average)
     const compositeScore = Number(
@@ -230,8 +234,8 @@ export default function HubPage() {
     );
 
     // 5. Hierarchy: Rank 1 (Beginner) -> Rank 5 (Master)
-    let personaTier = 'Rank 3 · Proficient';
-    let rankNumber = 3;
+    let personaTier = 'Rank 1 · Beginner';
+    let rankNumber = 1;
 
     if (compositeScore >= 4.7) {
       personaTier = 'Rank 5 · Master';
@@ -254,24 +258,26 @@ export default function HubPage() {
     const speedVector = (p1_velocity + p5_precision) / 2;
     const nuanceVector = (p2_lexical + p3_syntactic + p4_context) / 3;
 
-    let personaName = 'Balanced Polymath';
-    let personaDesc = 'Balanced cadence across output pace and sentence flow.';
+    let personaName = 'Emerging Practitioner';
+    let personaDesc = 'Complete typing tests and visual practices to calibrate your live cognitive archetype.';
 
-    if (speedVector >= 3.8 && nuanceVector >= 3.8) {
-      personaName = 'Eloquent Virtuoso';
-      personaDesc = 'Fluid drafting with high syntactic depth.';
-    } else if (speedVector < 3.8 && nuanceVector >= 3.8) {
-      personaName = 'Precision Architect';
-      personaDesc = 'Structured prose with exacting syntactic precision.';
-    } else if (speedVector >= 3.8 && nuanceVector < 3.8) {
-      personaName = 'Kinetic Storyteller';
-      personaDesc = 'Rapid drafting momentum and narrative velocity.';
-    } else if (compositeScore < 2.5) {
-      personaName = 'Emerging Wordsmith';
-      personaDesc = 'Building foundational velocity and modifier range.';
-    } else {
-      personaName = 'Balanced Polymath';
-      personaDesc = 'Balanced cadence across output pace and sentence flow.';
+    if (hasTyping || hasPractices) {
+      if (speedVector >= 3.8 && nuanceVector >= 3.8) {
+        personaName = 'Eloquent Virtuoso';
+        personaDesc = 'Fluid drafting velocity paired with high syntactic depth.';
+      } else if (speedVector < 3.8 && nuanceVector >= 3.8) {
+        personaName = 'Precision Architect';
+        personaDesc = 'Structured prose with exacting syntactic precision.';
+      } else if (speedVector >= 3.8 && nuanceVector < 3.8) {
+        personaName = 'Kinetic Storyteller';
+        personaDesc = 'Rapid drafting momentum and narrative velocity.';
+      } else if (compositeScore >= 2.5) {
+        personaName = 'Balanced Polymath';
+        personaDesc = 'Balanced cadence across output pace and sentence flow.';
+      } else {
+        personaName = 'Emerging Wordsmith';
+        personaDesc = 'Building foundational velocity and modifier range.';
+      }
     }
 
     return {
@@ -300,7 +306,7 @@ export default function HubPage() {
 
   return (
     <div
-      className="min-h-screen bg-[#f6f8f5] text-[#1b2b20] selection:bg-[#f3e5c8] selection:text-[#1b2b20] flex flex-col justify-between p-6 sm:p-8 relative overflow-hidden"
+      className="min-h-screen bg-[#f6f8f5] text-[#1b2b20] selection:bg-[#f3e5c8] selection:text-[#1b2b20] flex flex-col justify-between p-4 sm:p-6 md:p-8 relative overflow-hidden"
       style={{ fontFamily: "'Switzer', -apple-system, BlinkMacSystemFont, sans-serif" }}
     >
       {/* ── Soft Ambient Background ── */}
@@ -315,18 +321,18 @@ export default function HubPage() {
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-5xl mx-auto space-y-6 flex-1 flex flex-col justify-between">
+      <div className="relative z-10 w-full max-w-5xl mx-auto space-y-5 sm:space-y-6 flex-1 flex flex-col justify-between">
         {/* ── Top Header ── */}
-        <header className="flex items-center justify-between px-6 py-3 rounded-2xl bg-white/85 border border-[#e1e9df] shadow-[0_4px_24px_rgba(27,43,32,0.03)] backdrop-blur-xl">
+        <header className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl bg-white/85 border border-[#e1e9df] shadow-[0_4px_24px_rgba(27,43,32,0.03)] backdrop-blur-xl">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-[#1e3a24] flex items-center justify-center text-[#e8f2e9] font-bold text-sm shadow-xs transition-transform group-hover:scale-105">
+            <div className="w-8 h-8 rounded-xl bg-[#1e3a24] flex items-center justify-center text-[#e8f2e9] font-bold text-sm shadow-xs transition-transform group-hover:scale-105 shrink-0">
               <svg className="w-4 h-4 text-[#a3d9ad]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" />
                 <path d="M2 17l10 5 10-5" />
                 <path d="M2 12l10 5 10-5" />
               </svg>
             </div>
-            <span className="text-lg font-bold tracking-tight text-[#1b2b20]">
+            <span className="text-base sm:text-lg font-bold tracking-tight text-[#1b2b20]">
               duoprep
             </span>
           </Link>
@@ -348,7 +354,7 @@ export default function HubPage() {
 
         {/* ── Premium Golden-Obsidian Cognitive Ranking Card ── */}
         <section
-          className="p-6 sm:p-7 rounded-3xl relative overflow-hidden transition-all duration-300"
+          className="p-5 sm:p-7 rounded-3xl relative overflow-hidden transition-all duration-300"
           style={{
             background: 'linear-gradient(135deg, #fdf8ec 0%, #f8eed6 45%, #f2e3c0 100%)',
             border: '1px solid rgba(217, 160, 30, 0.4)',
@@ -361,10 +367,10 @@ export default function HubPage() {
             style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)' }}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-center relative z-10">
             
             {/* Left Column: Big Main Score on Upper Left + Personality */}
-            <div className="lg:col-span-5 space-y-3 border-b lg:border-b-0 lg:border-r border-[#ebd7ae] pb-5 lg:pb-0 lg:pr-6">
+            <div className="lg:col-span-5 space-y-2.5 sm:space-y-3 border-b lg:border-b-0 lg:border-r border-[#ebd7ae] pb-4 sm:pb-5 lg:pb-0 lg:pr-6">
               
               {/* Header row with (i) icon */}
               <div className="flex items-center justify-between">
@@ -386,11 +392,11 @@ export default function HubPage() {
               </div>
 
               {/* Main Rank Section with Golden Medal Emblem */}
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3 sm:gap-3.5">
                 {/* Minted Metallic Gold Coin Emblem with 1-5 rank */}
                 <GoldMedalBadge rankNumber={profile.rankNumber} />
 
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-1.5 sm:gap-2">
                   <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#18181b] font-['Sora',sans-serif] leading-none">
                     {profile.score.toFixed(1)}
                   </span>
@@ -399,12 +405,12 @@ export default function HubPage() {
               </div>
 
               {/* Personality Archetype & Tier Together */}
-              <div className="pt-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-[#09090b] font-['Sora',sans-serif]">
+              <div className="pt-0.5 sm:pt-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-[#09090b] font-['Sora',sans-serif]">
                     {profile.name}
                   </h2>
-                  <span className="text-[10.5px] font-bold text-[#784805] bg-[#faedd0] px-2.5 py-0.5 rounded-full border border-[#e9cf97]">
+                  <span className="text-[10px] sm:text-[10.5px] font-bold text-[#784805] bg-[#faedd0] px-2.5 py-0.5 rounded-full border border-[#e9cf97]">
                     {profile.tier}
                   </span>
                 </div>
@@ -413,13 +419,13 @@ export default function HubPage() {
                 </p>
               </div>
 
-              <div className="text-[11px] font-medium text-[#8c7e6c] pt-0.5">
+              <div className="text-[10.5px] sm:text-[11px] font-medium text-[#8c7e6c] pt-0.5">
                 {typingTests.length} Typing Tests · {practices.length} Writing Practices
               </div>
             </div>
 
             {/* Right Column: 5-Point Golden Telemetry Spectrum */}
-            <div className="lg:col-span-7 space-y-3">
+            <div className="lg:col-span-7 space-y-2.5 sm:space-y-3">
               {profile.indicators.map((ind, idx) => {
                 const totalBars = 5;
                 const activeBars = Math.min(5, Math.max(1, Math.round(ind.score)));
@@ -428,7 +434,7 @@ export default function HubPage() {
                   <div key={idx} className="space-y-1">
                     <div className="flex justify-between items-center text-xs">
                       <div className="flex items-baseline gap-1.5">
-                        <span className="font-semibold text-[#18181b]">
+                        <span className="font-semibold text-[#18181b] text-[11.5px] sm:text-xs">
                           {ind.label}
                         </span>
                         <span className="text-[10.5px] text-[#78716c] hidden sm:inline font-normal">
@@ -468,12 +474,12 @@ export default function HubPage() {
         </section>
 
         {/* ── Dual Application Launcher Cards ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 my-auto">
           {/* Card 1: WriteAbout */}
-          <div className="p-7 sm:p-8 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_10px_30px_-5px_rgba(40,68,44,0.06)] hover:shadow-[0_15px_35px_-5px_rgba(40,68,44,0.1)] hover:border-[#c5d8c3] transition-all duration-300 flex flex-col justify-between">
+          <div className="p-6 sm:p-8 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_10px_30px_-5px_rgba(40,68,44,0.06)] hover:shadow-[0_15px_35px_-5px_rgba(40,68,44,0.1)] hover:border-[#c5d8c3] transition-all duration-300 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
-                <span className="px-3 py-1 rounded-full bg-[#e8f2e9] text-[#2c4731] text-[11px] font-bold uppercase tracking-wider border border-[#d0e3cf]">
+                <span className="px-3 py-1 rounded-full bg-[#e8f2e9] text-[#2c4731] text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider border border-[#d0e3cf]">
                   Writing Analysis
                 </span>
                 <span className="text-xs text-[#5f7a65]">
@@ -481,7 +487,7 @@ export default function HubPage() {
                 </span>
               </div>
 
-              <h2 className="text-2xl font-bold text-[#1b2b20] mb-1.5 tracking-tight font-['Sora',sans-serif]">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#1b2b20] mb-1.5 tracking-tight font-['Sora',sans-serif]">
                 WriteAbout
               </h2>
               <p className="text-xs sm:text-sm text-[#4d6353] font-normal leading-relaxed mb-5">
@@ -499,6 +505,7 @@ export default function HubPage() {
             <div className="pt-3 border-t border-[#eaf0e8]">
               <Link
                 href="/write-about"
+                onClick={handleWriteAboutClick}
                 className="w-full py-3.5 px-5 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-[#f2f7f2] text-xs font-bold uppercase tracking-wider transition-all text-center shadow-[0_4px_14px_rgba(30,58,36,0.18)] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Launch WriteAbout</span>
@@ -508,10 +515,10 @@ export default function HubPage() {
           </div>
 
           {/* Card 2: SwiftType */}
-          <div className="p-7 sm:p-8 rounded-3xl bg-white/95 border border-[#d8e3eb] shadow-[0_10px_30px_-5px_rgba(44,79,100,0.06)] hover:shadow-[0_15px_35px_-5px_rgba(44,79,100,0.1)] hover:border-[#c2d5e2] transition-all duration-300 flex flex-col justify-between">
+          <div className="p-6 sm:p-8 rounded-3xl bg-white/95 border border-[#d8e3eb] shadow-[0_10px_30px_-5px_rgba(44,79,100,0.06)] hover:shadow-[0_15px_35px_-5px_rgba(44,79,100,0.1)] hover:border-[#c2d5e2] transition-all duration-300 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
-                <span className="px-3 py-1 rounded-full bg-[#e8f1f7] text-[#24485f] text-[11px] font-bold uppercase tracking-wider border border-[#cfdfeb]">
+                <span className="px-3 py-1 rounded-full bg-[#e8f1f7] text-[#24485f] text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider border border-[#cfdfeb]">
                   Typing Telemetry
                 </span>
                 <span className="text-xs text-[#5b7587]">
@@ -519,7 +526,7 @@ export default function HubPage() {
                 </span>
               </div>
 
-              <h2 className="text-2xl font-bold text-[#172b38] mb-1.5 tracking-tight font-['Sora',sans-serif]">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#172b38] mb-1.5 tracking-tight font-['Sora',sans-serif]">
                 SwiftType
               </h2>
               <p className="text-xs sm:text-sm text-[#455f70] font-normal leading-relaxed mb-5">
@@ -556,6 +563,46 @@ export default function HubPage() {
           duoprep
         </footer>
       </div>
+
+      {/* ── Mobile Notice Modal for WriteAbout ── */}
+      {showMobileNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl p-6 bg-white/95 border border-[#dbe6d9] shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#e8f2e9] text-[#1e3a24] flex items-center justify-center mx-auto shadow-xs">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-[#0f172a] font-['Sora',sans-serif]">
+                Best on Desktop & Laptop
+              </h3>
+              <p className="text-xs text-[#556b5a] leading-relaxed">
+                WriteAbout is a timed visual typing sprint designed for physical keyboards. It works best on a desktop or laptop screen.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => setShowMobileNotice(false)}
+                className="w-full py-2.5 px-4 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer"
+              >
+                ← Back
+              </button>
+              <Link
+                href="/write-about"
+                onClick={() => setShowMobileNotice(false)}
+                className="w-full py-2 px-4 rounded-2xl text-[11px] text-[#556b5a] hover:text-[#1e3a24] font-medium transition-colors text-center"
+              >
+                Continue on Mobile Anyway →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Redesigned Cognitive Ranking Architecture Modal ── */}
       {showRankInfo && (

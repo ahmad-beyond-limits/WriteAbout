@@ -25,6 +25,14 @@ const RATE_COLORS = {
   excellent: '#34d399'
 };
 
+const RATE_WEIGHTS: Record<string, number> = {
+  excellent: 5.0,
+  high: 4.2,
+  good: 3.5,
+  medium: 2.7,
+  low: 1.5
+};
+
 const SAMPLE_IMAGES = [
   'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1000&q=80',
   'https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1000&q=80',
@@ -82,39 +90,48 @@ function InsightsScreen({
   const avgLevelScores = (() => {
     if (!data.history || data.history.length === 0) {
       return [
-        { name: 'L1: Basic', label: 'Basic Writing', score: 3.5 },
-        { name: 'L2: Context', label: 'Image Context', score: 3.2 },
-        { name: 'L3: Adjectives', label: 'Adjectives', score: 3.4 },
-        { name: 'L4: Syntax', label: 'Syntax & Flow', score: 3.0 },
+        { name: 'L1: Basic', label: 'Basic Writing', score: 0 },
+        { name: 'L2: Context', label: 'Image Context', score: 0 },
+        { name: 'L3: Adjectives', label: 'Adjectives', score: 0 },
+        { name: 'L4: Syntax', label: 'Syntax & Flow', score: 0 },
       ];
     }
-    let sumL1 = 0, sumL2 = 0, sumL3 = 0, sumL4 = 0;
-    data.history.forEach((item: any) => {
-      const words = item.text ? item.text.trim().split(/\s+/).filter(Boolean).length : 0;
-      const l1 = Math.min(5, Math.max(1, Math.ceil(words / 8)));
-      const l2 = item.rate === 'excellent' ? 5 : item.rate === 'high' ? 4 : item.rate === 'good' ? 3 : item.rate === 'medium' ? 3 : 2;
-      const l3 = item.rate === 'excellent' ? 5 : item.rate === 'high' ? 4 : item.rate === 'good' ? 3 : item.rate === 'medium' ? 3 : 2;
-      const l4 = item.rate === 'excellent' ? 5 : item.rate === 'high' ? 4 : item.rate === 'good' ? 3 : item.rate === 'medium' ? 2 : 1;
-      sumL1 += l1;
-      sumL2 += l2;
-      sumL3 += l3;
-      sumL4 += l4;
-    });
     const count = data.history.length;
+    let l1Sum = 0, l2Sum = 0, l3Sum = 0, l4Sum = 0;
+    data.history.forEach((h: any) => {
+      const words = h.text ? h.text.trim().split(/\s+/).filter(Boolean).length : 0;
+      const sents = h.text ? Math.max(1, (h.text.match(/[^.!?]+[.!?]+/g) || [h.text]).length) : 1;
+      l1Sum += Math.min(5, Math.max(1, Math.ceil(words / 10)));
+      l2Sum += RATE_WEIGHTS[h.rate?.toLowerCase()] || 3;
+      l3Sum += Math.min(5, Math.max(1, Math.round(words / 12) + 1));
+      l4Sum += Math.min(5, Math.max(1, Math.round((words / sents) / 3)));
+    });
     return [
-      { name: 'L1: Basic', label: 'Basic Writing', score: Number((sumL1 / count).toFixed(1)) },
-      { name: 'L2: Context', label: 'Image Context', score: Number((sumL2 / count).toFixed(1)) },
-      { name: 'L3: Adjectives', label: 'Adjectives', score: Number((sumL3 / count).toFixed(1)) },
-      { name: 'L4: Syntax', label: 'Syntax & Flow', score: Number((sumL4 / count).toFixed(1)) },
+      { name: 'L1: Basic', label: 'Basic Writing', score: Number((l1Sum / count).toFixed(1)) },
+      { name: 'L2: Context', label: 'Image Context', score: Number((l2Sum / count).toFixed(1)) },
+      { name: 'L3: Adjectives', label: 'Adjectives', score: Number((l3Sum / count).toFixed(1)) },
+      { name: 'L4: Syntax', label: 'Syntax & Flow', score: Number((l4Sum / count).toFixed(1)) },
     ];
   })();
 
   return (
     <div className="insights-wrapper">
-      {/* Editorial Sticky Top Navigation */}
+      {/* Top Bar Navigation */}
       <nav className="insights-nav">
         <div className="insights-nav-left">
-          <Link href="/hub" className="btn-modern-outline" style={{ textDecoration: 'none', padding: '7px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Link
+            href="/hub"
+            className="btn-modern-outline"
+            style={{
+              padding: '7px 16px',
+              fontSize: '13px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="12 19 5 12 12 5" />
@@ -127,6 +144,19 @@ function InsightsScreen({
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+          {onConfigureKey && (
+            <button
+              className="btn-modern-outline"
+              onClick={onConfigureKey}
+              style={{ padding: '8px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
+              title="Configure Groq API Key"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+              </svg>
+              API Key
+            </button>
+          )}
           <button className="btn-modern-outline" onClick={onLogout} style={{ padding: '8px 20px', fontSize: '13px' }}>
             Logout
           </button>
@@ -544,7 +574,7 @@ function InsightsScreen({
 export default function WriteAboutApp() {
   const TOTAL_TIME = 60;
   const [user, setUser] = useState<{ id: number; username: string } | null>(null);
-  const [currentView, setCurrentView] = useState<'apikey' | 'insights' | 'practice'>('insights');
+  const [currentView, setCurrentView] = useState<'apikey' | 'insights' | 'practice'>('apikey');
   const [apiKey, setApiKey] = useState('');
   const [authStatus, setAuthStatus] = useState('');
   const [isLoadingAuth, setIsLoadingAuth] = useState(false);
@@ -556,6 +586,7 @@ export default function WriteAboutApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult>(null);
   const [showLimitsInfo, setShowLimitsInfo] = useState(false);
+  const [showMobileNotice, setShowMobileNotice] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('writeabout_user');
@@ -566,10 +597,11 @@ export default function WriteAboutApp() {
     }
     try {
       setUser(JSON.parse(saved));
-      if (savedKey) {
-        setApiKey(savedKey);
+      if (savedKey && savedKey.trim().length > 0) {
+        setApiKey(savedKey.trim());
         setCurrentView('insights');
       } else {
+        setApiKey('');
         setCurrentView('apikey');
       }
     } catch (e) {
@@ -589,7 +621,7 @@ export default function WriteAboutApp() {
         headers: { Authorization: `Bearer ${apiKey.trim()}` }
       });
       if (!verifyRes.ok) {
-        setAuthStatus('Invalid Groq API Key.');
+        setAuthStatus('Invalid Groq API Key. Please verify key on groq.com.');
         setIsLoadingAuth(false);
         return;
       }
@@ -629,7 +661,7 @@ export default function WriteAboutApp() {
     return () => clearInterval(timer);
   }, [isRunning, isImageLoaded, timeLeft]);
 
-  const handleStartPractice = () => {
+  const executeStartPractice = () => {
     setIsImageLoaded(false);
     setIsRunning(false);
     getRandomImage();
@@ -637,6 +669,18 @@ export default function WriteAboutApp() {
     setText('');
     setAnalysis(null);
     setCurrentView('practice');
+  };
+
+  const handleStartPractice = () => {
+    if (!apiKey || apiKey.trim().length === 0) {
+      setCurrentView('apikey');
+      return;
+    }
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setShowMobileNotice(true);
+      return;
+    }
+    executeStartPractice();
   };
 
   const submitLog = async () => {
@@ -859,12 +903,55 @@ export default function WriteAboutApp() {
 
   if (currentView === 'insights') {
     return (
-      <InsightsScreen
-        onPractice={handleStartPractice}
-        onLogout={handleLogout}
-        onConfigureKey={() => setCurrentView('apikey')}
-        userId={user.id}
-      />
+      <>
+        <InsightsScreen
+          onPractice={handleStartPractice}
+          onLogout={handleLogout}
+          onConfigureKey={() => setCurrentView('apikey')}
+          userId={user.id}
+        />
+
+        {showMobileNotice && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-sm rounded-3xl p-6 bg-white/95 border border-[#dbe6d9] shadow-2xl space-y-4 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-[#e8f2e9] text-[#1e3a24] flex items-center justify-center mx-auto shadow-xs">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-[#0f172a] font-['Sora',sans-serif]">
+                  Best on Desktop & Laptop
+                </h3>
+                <p className="text-xs text-[#556b5a] leading-relaxed">
+                  WriteAbout is a timed visual typing sprint designed for physical keyboards. It works best on a desktop or laptop screen.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <Link
+                  href="/hub"
+                  className="w-full py-2.5 px-4 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer text-center"
+                >
+                  ← Back to Hub
+                </Link>
+                <button
+                  onClick={() => {
+                    setShowMobileNotice(false);
+                    executeStartPractice();
+                  }}
+                  className="w-full py-2 px-4 rounded-2xl text-[11px] text-[#556b5a] hover:text-[#1e3a24] font-medium transition-colors text-center cursor-pointer"
+                >
+                  Continue on Mobile Anyway →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -874,7 +961,18 @@ export default function WriteAboutApp() {
   const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
   return (
-    <div className="writeabout-app-wrapper" style={{ minHeight: '100vh', height: '100vh', background: 'linear-gradient(135deg, #f6f7fa 0%, #e7e5fc 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+    <div
+      className="writeabout-app-wrapper"
+      style={{
+        minHeight: '100vh',
+        height: '100vh',
+        background: 'linear-gradient(135deg, #f6f7fa 0%, #e7e5fc 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        position: 'relative'
+      }}
+    >
       <nav className="top-nav">
         <div className={`timer-pill ${isUrgent ? 'urgent' : ''}`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

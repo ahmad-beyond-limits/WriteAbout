@@ -19,13 +19,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'No API Key provided' }, { status: 400 });
     }
 
-    // Read the system prompt (Exact word-for-word original logic)
+    // Read the system prompt (with multi-path discovery and built-in fallback)
     let systemPrompt = '';
-    try {
-      systemPrompt = fs.readFileSync(path.join(process.cwd(), 'write-about-md'), 'utf-8');
-    } catch (e) {
-      console.error('Failed to read write-about-md', e);
-      return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+    const potentialPaths = [
+      path.join(process.cwd(), 'write-about-md'),
+      path.join(process.cwd(), 'apps/web/write-about-md'),
+      path.join(__dirname, '../../../../write-about-md'),
+      path.join(__dirname, '../../write-about-md')
+    ];
+
+    for (const p of potentialPaths) {
+      if (fs.existsSync(p)) {
+        try {
+          systemPrompt = fs.readFileSync(p, 'utf-8');
+          if (systemPrompt) break;
+        } catch (e) {}
+      }
+    }
+
+    if (!systemPrompt) {
+      systemPrompt = `You are an expert evaluator for the Duolingo English Test (DET) "Write About the Photo" task.
+Assess the candidate's written response and return a JSON object with:
+1. "rating": one of ["low", "medium", "good", "high", "excellent"]
+2. "feedback": concise diagnostic feedback (2-3 sentences max).
+Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     }
 
     const modelName = process.env.GROQ_MODEL_NAME || 'qwen/qwen3.6-27b';

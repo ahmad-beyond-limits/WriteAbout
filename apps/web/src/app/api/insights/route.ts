@@ -11,13 +11,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
     }
 
-    // 1. Sweep Clean (Data Retention Logic)
-    // Delete practices older than 1 month
-    await pool.query(`DELETE FROM practices WHERE created_at < NOW() - INTERVAL '1 month'`);
-    // Delete API calls older than 1 week
-    await pool.query(`DELETE FROM api_calls WHERE created_at < NOW() - INTERVAL '1 week'`);
+    // 1. Clean temporary old API telemetry logs (older than 30 days)
+    await pool.query(`DELETE FROM api_calls WHERE created_at < NOW() - INTERVAL '30 days'`);
 
-    // 2. Fetch API Usage Data (strictly 7 days as older data is deleted)
+    // 2. Fetch API Usage Data (strictly 7 days)
     const apiUsageResult = await pool.query(`
       WITH days AS (
         SELECT generate_series(
@@ -36,13 +33,17 @@ export async function GET(request: Request) {
     `, [userId]);
 
     // 3. Fetch Performance Breakdown (Group by rate)
-    const intervalStr = filter === 'month' ? '1 month' : '1 week';
     const performanceResult = await pool.query(`
       SELECT rate AS name, COUNT(*) AS value
       FROM practices
-      WHERE created_at >= NOW() - INTERVAL '${intervalStr}' AND user_id = $1
+      WHERE (
+        CASE 
+          WHEN $2 = 'month' THEN created_at >= NOW() - INTERVAL '1 month'
+          ELSE created_at >= NOW() - INTERVAL '7 days'
+        END
+      ) AND user_id = $1
       GROUP BY rate;
-    `, [userId]);
+    `, [userId, filter]);
 
     // Ensure all rates are present for the Bar Chart
     const rates = ['low', 'medium', 'good', 'high', 'excellent'];
@@ -55,10 +56,15 @@ export async function GET(request: Request) {
     const historyResult = await pool.query(`
       SELECT id, rate, feedback, image_url, text, to_char(created_at, 'Mon DD, YYYY') as date
       FROM practices
-      WHERE created_at >= NOW() - INTERVAL '${intervalStr}' AND user_id = $1
+      WHERE (
+        CASE 
+          WHEN $2 = 'month' THEN created_at >= NOW() - INTERVAL '1 month'
+          ELSE created_at >= NOW() - INTERVAL '7 days'
+        END
+      ) AND user_id = $1
       ORDER BY created_at DESC
-      LIMIT 20;
-    `, [userId]);
+      LIMIT 30;
+    `, [userId, filter]);
 
     return NextResponse.json({
       success: true,

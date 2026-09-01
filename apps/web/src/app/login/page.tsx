@@ -46,6 +46,11 @@ export default function LoginPage() {
       }
 
       localStorage.setItem('writeabout_user', JSON.stringify(data.user));
+      if (data.apiKey) {
+        localStorage.setItem('writeabout_apikey', data.apiKey);
+      } else {
+        localStorage.removeItem('writeabout_apikey');
+      }
       router.push('/hub');
     } catch (err: any) {
       setError(err.message || 'An error occurred during sign in.');
