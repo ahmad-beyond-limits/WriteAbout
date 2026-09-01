@@ -6,6 +6,13 @@ import { SettingsProvider } from "@/lib/SettingsContext";
 export const metadata: Metadata = {
   title: "SwiftType | Minimalist Speed Typing Test",
   description: "A fast, modern, and distraction-free typing test application powered by Neon PostgreSQL.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" }
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg"
+  }
 };
 
 export default function RootLayout({
