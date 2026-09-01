@@ -337,11 +337,7 @@ export default function HubPage() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <span className="text-xs text-[#556b5a] font-medium hidden sm:inline">
-              Welcome, <strong className="text-[#1b2b20]">{user?.lastName || user?.username}</strong>
-            </span>
-
+          <div className="flex items-center gap-2">
             {(user?.role === 'admin' || user?.username?.toLowerCase() === 'muhammad ahmad') && (
               <Link
                 href="/admin"
@@ -367,6 +363,26 @@ export default function HubPage() {
             </button>
           </div>
         </header>
+
+        {/* ── User Greeting Just After Nav Bar ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1 -mt-1 sm:-mt-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1b2b20] font-['Sora',sans-serif]">
+              Welcome, {(() => {
+                if (user?.lastName && user.lastName.trim()) return user.lastName.trim();
+                if (user?.username) {
+                  const parts = user.username.trim().split(/\s+/);
+                  const last = parts[parts.length - 1];
+                  return last.charAt(0).toUpperCase() + last.slice(1);
+                }
+                return 'Member';
+              })()}
+            </h1>
+            <p className="text-xs text-[#556b5a] mt-0.5">
+              Dual-competency cognitive diagnostic & performance hub
+            </p>
+          </div>
+        </div>
 
         {/* ── Premium Golden-Obsidian Cognitive Ranking Card ── */}
         <section

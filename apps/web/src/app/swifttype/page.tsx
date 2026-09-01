@@ -157,11 +157,6 @@ function SwiftTypeDashboard({
           </div>
 
           <div className="flex items-center gap-3">
-            {userLastName && (
-              <span className="text-xs text-[#556b5a] font-medium hidden sm:inline">
-                Welcome, <strong className="text-[#1b2b20]">{userLastName}</strong>
-              </span>
-            )}
             <button
               onClick={onStartTest}
               className="px-5 py-2 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-[#f2f7f2] text-xs font-bold uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(30,58,36,0.18)] flex items-center gap-2 cursor-pointer"
@@ -171,6 +166,25 @@ function SwiftTypeDashboard({
             </button>
           </div>
         </header>
+
+        {/* ── User Greeting Just After Nav Bar ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1 -mt-1 sm:-mt-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0f172a] font-['Sora',sans-serif]">
+              Welcome, {(() => {
+                if (userLastName && userLastName.trim()) {
+                  const parts = userLastName.trim().split(/\s+/);
+                  const last = parts[parts.length - 1];
+                  return last.charAt(0).toUpperCase() + last.slice(1);
+                }
+                return 'Typist';
+              })()}
+            </h1>
+            <p className="text-xs text-[#64748b] mt-0.5">
+              SwiftType Real-Time Kinetic Typing & Velocity Analytics
+            </p>
+          </div>
+        </div>
 
         {/* ── Key Telemetry Cards (6 Diagnostic Modules) ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">

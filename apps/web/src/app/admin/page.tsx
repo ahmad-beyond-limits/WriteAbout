@@ -287,9 +287,6 @@ export default function AdminPortalPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-[#556b5a] font-medium hidden md:inline">
-              Welcome, Administrator <strong className="text-[#1b2b20]">{currentUser?.lastName || currentUser?.username}</strong>
-            </span>
             <Link
               href="/hub"
               className="px-3.5 py-1.5 rounded-full bg-white border border-[#d8e3d6] hover:bg-[#edf4ed] text-[#2c4731] text-xs font-semibold tracking-wider transition-all shadow-xs flex items-center gap-1.5"
@@ -316,6 +313,26 @@ export default function AdminPortalPage() {
             </button>
           </div>
         </header>
+
+        {/* ── Admin Greeting Just After Nav Bar ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1 -mt-1 sm:-mt-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#1b2b20] font-['Sora',sans-serif]">
+              Welcome, Administrator {(() => {
+                const target = currentUser?.lastName || currentUser?.username;
+                if (target && target.trim()) {
+                  const parts = target.trim().split(/\s+/);
+                  const last = parts[parts.length - 1];
+                  return last.charAt(0).toUpperCase() + last.slice(1);
+                }
+                return 'Admin';
+              })()}
+            </h1>
+            <p className="text-xs text-[#556b5a] mt-0.5">
+              Platform user directory, security permissions, and telemetry monitoring
+            </p>
+          </div>
+        </div>
 
         {/* ── Metric Summary Cards ── */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

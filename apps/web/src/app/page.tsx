@@ -74,10 +74,7 @@ export default function LandingPage() {
             </Link>
             <span className="hidden md:block w-px h-3.5 bg-[#dbe5da]" />
             {user ? (
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="text-xs text-[#556b5a] font-medium hidden lg:inline">
-                  Welcome, <strong className="text-[#1b2b20]">{user.lastName || user.username}</strong>
-                </span>
+              <div className="flex items-center gap-2">
                 {(user.role === 'admin' || user.username?.toLowerCase() === 'muhammad ahmad') && (
                   <Link
                     href="/admin"

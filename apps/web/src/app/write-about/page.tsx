@@ -150,11 +150,6 @@ function InsightsScreen({
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
-          {(lastName || username) && (
-            <span style={{ fontSize: '13px', color: '#556b5a', fontWeight: 500, marginRight: '4px' }}>
-              Welcome, <strong style={{ color: '#1b2b20' }}>{lastName || username}</strong>
-            </span>
-          )}
           {(role === 'admin' || username?.toLowerCase() === 'muhammad ahmad') && (
             <Link
               href="/admin"
@@ -195,6 +190,27 @@ function InsightsScreen({
       </nav>
 
       <div className="insights-content">
+        {/* ── User Greeting Just After Nav Bar ── */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h1 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#1b2b20', margin: 0, fontFamily: "'Sora', sans-serif" }}>
+            Welcome, {(() => {
+              if (lastName && lastName.trim()) {
+                const parts = lastName.trim().split(/\s+/);
+                const last = parts[parts.length - 1];
+                return last.charAt(0).toUpperCase() + last.slice(1);
+              }
+              if (username) {
+                const parts = username.trim().split(/\s+/);
+                const last = parts[parts.length - 1];
+                return last.charAt(0).toUpperCase() + last.slice(1);
+              }
+              return 'Writer';
+            })()}
+          </h1>
+          <p style={{ fontSize: '0.8rem', color: '#556b5a', margin: '0.25rem 0 0 0' }}>
+            WriteAbout Real-Time Dual-Process Evaluation & Lexical Analytics
+          </p>
+        </div>
         {/* Master Asymmetric Editorial Grid: Writing Velocity on Left, 3 Analytics Instruments on Right */}
         <div className="insights-dashboard-grid">
           {/* Left Column: Feature Hero Velocity Card (Full Height) */}
