@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { TestMode, TypingTestSubmission } from '@writeabout/types';
 import { SettingsProvider, useSettings } from '@/lib/SettingsContext';
@@ -37,6 +38,11 @@ function SwiftTypeDashboard({
   const [loading, setLoading] = useState(true);
 
   const fetchHistory = useCallback(async () => {
+    if (!userId || userId <= 0) {
+      setHistory([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const res = await fetch(`/api/history?userId=${userId}&limit=50`);
@@ -56,7 +62,7 @@ function SwiftTypeDashboard({
   }, [fetchHistory]);
 
   const stats = useMemo(() => {
-    if (!history.length) {
+    if (!history || history.length === 0) {
       return {
         totalTests: 0,
         peakWpm: 0,
@@ -69,12 +75,12 @@ function SwiftTypeDashboard({
       };
     }
 
-    const peak = Math.max(...history.map((h) => h.wpm));
-    const totalWpm = history.reduce((sum, h) => sum + h.wpm, 0);
+    const peak = Math.max(...history.map((h) => h.wpm || 0));
+    const totalWpm = history.reduce((sum, h) => sum + (h.wpm || 0), 0);
     const avgWpm = Math.round(totalWpm / history.length);
-    const avgAcc = Math.round(history.reduce((sum, h) => sum + h.accuracy, 0) / history.length);
-    const avgCons = Math.round(history.reduce((sum, h) => sum + h.consistency, 0) / history.length);
-    const totalChars = history.reduce((sum, h) => sum + (h.correctCharacters + h.incorrectCharacters), 0);
+    const avgAcc = Math.round(history.reduce((sum, h) => sum + (h.accuracy || 0), 0) / history.length);
+    const avgCons = Math.round(history.reduce((sum, h) => sum + (h.consistency || 0), 0) / history.length);
+    const totalChars = history.reduce((sum, h) => sum + ((h.correctCharacters || 0) + (h.incorrectCharacters || 0)), 0);
 
     const modeCounts = { time: 0, words: 0, custom: 0 };
     history.forEach((h) => {
@@ -197,7 +203,7 @@ function SwiftTypeDashboard({
             </span>
             <div className="my-2.5 flex items-baseline gap-1">
               <span className="text-4xl sm:text-[40px] font-light text-[#0f172a] font-['Sora',sans-serif] tracking-tight leading-none">
-                {stats.avgAccuracy || 100}
+                {stats.totalTests > 0 ? stats.avgAccuracy : 0}
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">%</span>
             </div>
@@ -211,7 +217,7 @@ function SwiftTypeDashboard({
             </span>
             <div className="my-2.5 flex items-baseline gap-1">
               <span className="text-4xl sm:text-[40px] font-light text-[#0f172a] font-['Sora',sans-serif] tracking-tight leading-none">
-                {stats.avgConsistency || 100}
+                {stats.totalTests > 0 ? stats.avgConsistency : 0}
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">%</span>
             </div>
@@ -449,8 +455,23 @@ function SwiftTypeDashboard({
 }
 
 function SwiftTypeContent() {
+  const router = useRouter();
   const { settings } = useSettings();
   const { user } = useAuth();
+  const [currentUser, setCurrentUser] = useState<{ id: number; username: string } | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('writeabout_user') || localStorage.getItem('swifttype_user');
+    if (saved) {
+      try {
+        setCurrentUser(JSON.parse(saved));
+      } catch (e) {
+        router.push('/login');
+      }
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
 
   const [currentView, setCurrentView] = useState<'dashboard' | 'test'>('dashboard');
   const [mode, setMode] = useState<TestMode>('time');
@@ -496,13 +517,16 @@ function SwiftTypeContent() {
     fetchWords();
   }, [fetchWords]);
 
+  const activeUserId = currentUser?.id || user?.id || 0;
+
   const handleComplete = async (submission: TypingTestSubmission) => {
     setLastResult(submission);
+    if (!activeUserId || activeUserId <= 0) return;
     try {
       await fetch('/api/tests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...submission, userId: user?.id || 1, wordSetId })
+        body: JSON.stringify({ ...submission, userId: activeUserId, wordSetId })
       });
     } catch (err) {
       console.error('Failed to save result:', err);
@@ -525,7 +549,7 @@ function SwiftTypeContent() {
           fetchWords();
           setCurrentView('test');
         }}
-        userId={user?.id || 1}
+        userId={activeUserId}
       />
     );
   }

@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('swifttype_user');
+      const stored = localStorage.getItem('writeabout_user') || localStorage.getItem('swifttype_user');
       if (stored) {
         setUser(JSON.parse(stored));
       }
@@ -36,11 +36,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (newUser: AuthUser) => {
     setUser(newUser);
+    localStorage.setItem('writeabout_user', JSON.stringify(newUser));
     localStorage.setItem('swifttype_user', JSON.stringify(newUser));
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('writeabout_user');
     localStorage.removeItem('swifttype_user');
   };
 
