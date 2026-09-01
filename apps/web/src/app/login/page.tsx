@@ -10,6 +10,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (typeof e.getModifierState === 'function') {
+        setCapsLock(e.getModifierState('CapsLock'));
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keyup', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('keyup', handleKey);
+    };
+  }, []);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('writeabout_user');
@@ -120,14 +135,35 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-mono text-[#4a6350] uppercase tracking-wider mb-1.5 font-semibold">
-              Password
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-mono text-[#4a6350] uppercase tracking-wider font-semibold">
+                Password
+              </label>
+              {capsLock && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-amber-600 animate-pulse">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3l7 7h-4v7H9v-7H5l7-7z" />
+                    <path d="M5 21h14" />
+                  </svg>
+                  <span>Caps Lock ON</span>
+                </span>
+              )}
+            </div>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (typeof e.getModifierState === 'function') {
+                  setCapsLock(e.getModifierState('CapsLock'));
+                }
+              }}
+              onKeyUp={(e) => {
+                if (typeof e.getModifierState === 'function') {
+                  setCapsLock(e.getModifierState('CapsLock'));
+                }
+              }}
               placeholder="Enter password"
               className="w-full px-4 py-2.5 rounded-xl bg-[#f7faf6] border border-[#d6e3d4] text-[#1b2b20] placeholder-[#8a9f90] text-sm focus:outline-none focus:border-[#28442c] focus:bg-white transition-all font-mono"
             />

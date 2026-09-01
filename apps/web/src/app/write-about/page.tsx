@@ -627,6 +627,21 @@ export default function WriteAboutApp() {
   const [analysis, setAnalysis] = useState<AnalysisResult>(null);
   const [showLimitsInfo, setShowLimitsInfo] = useState(false);
   const [showMobileNotice, setShowMobileNotice] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (typeof e.getModifierState === 'function') {
+        setCapsLock(e.getModifierState('CapsLock'));
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keyup', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('keyup', handleKey);
+    };
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('writeabout_user');
@@ -1017,12 +1032,23 @@ export default function WriteAboutApp() {
       }}
     >
       <nav className="top-nav">
-        <div className={`timer-pill ${isUrgent ? 'urgent' : ''}`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          {formattedTime}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className={`timer-pill ${isUrgent ? 'urgent' : ''}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            {formattedTime}
+          </div>
+          {capsLock && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-700 text-xs font-bold uppercase tracking-wider animate-pulse shadow-xs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3l7 7h-4v7H9v-7H5l7-7z" />
+                <path d="M5 21h14" />
+              </svg>
+              <span>Caps Lock is ON</span>
+            </div>
+          )}
         </div>
         <div className="nav-title">WriteAbout</div>
       </nav>
@@ -1062,6 +1088,16 @@ export default function WriteAboutApp() {
               placeholder={!isImageLoaded ? 'Waiting for challenge image to load...' : isRunning ? 'Write your beautiful description here...' : 'Click start to begin the 60-second challenge.'}
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (typeof e.getModifierState === 'function') {
+                  setCapsLock(e.getModifierState('CapsLock'));
+                }
+              }}
+              onKeyUp={(e) => {
+                if (typeof e.getModifierState === 'function') {
+                  setCapsLock(e.getModifierState('CapsLock'));
+                }
+              }}
               disabled={!isRunning || !isImageLoaded || isSubmitting}
               autoFocus
             />

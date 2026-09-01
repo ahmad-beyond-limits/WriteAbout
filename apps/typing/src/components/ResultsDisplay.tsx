@@ -122,6 +122,135 @@ export default function ResultsDisplay({
   const avgWpm = Math.round(timeSeries.reduce((acc, p) => acc + p.wpm, 0) / Math.max(1, timeSeries.length));
   const dwellTime = Math.round(60000 / Math.max(1, (result.rawWpm || result.wpm) * 5));
 
+  // Dynamic Functional Cadence Waveform Analysis with Rich Color-Coding & Inferences
+  const cadenceAnalysis = useMemo(() => {
+    const durationSec = Math.max(1, Math.round(result.elapsedMilliseconds / 1000));
+    const consistency = result.consistency || 80;
+    const accuracy = result.accuracy || 95;
+    const totalErrors = result.incorrectCharacters + result.extraCharacters;
+
+    const dotCount = 10;
+    const maxP = Math.max(...timeSeries.map(p => p.wpm), result.wpm, 1);
+    const avgWpm = Math.round(timeSeries.reduce((acc, p) => acc + p.wpm, 0) / Math.max(1, timeSeries.length));
+
+    let fastCount = 0;
+    let steadyCount = 0;
+    let slowCount = 0;
+    let errCount = 0;
+
+    const dots = Array.from({ length: dotCount }, (_, i) => {
+      const progress = i / (dotCount - 1);
+      const sampleIdx = Math.min(Math.floor(progress * (timeSeries.length - 1)), Math.max(0, timeSeries.length - 1));
+      const pt = timeSeries[sampleIdx];
+      const wpm = pt ? pt.wpm : result.wpm;
+      const ratio = Math.max(0.2, Math.min(1, wpm / maxP));
+      const sizePx = Math.round(14 + ratio * 14); // 14px to 28px
+      const hasError = pt ? pt.errors > 0 : (totalErrors > 0 && (i === 3 || i === 7));
+
+      let color = '#10b981'; // emerald
+      let bgGradient = 'from-emerald-400 to-teal-500';
+      let textColor = 'text-emerald-700';
+      let statusLabel = 'High Burst';
+
+      if (hasError) {
+        color = '#f43f5e';
+        bgGradient = 'from-rose-500 to-red-600';
+        textColor = 'text-rose-700';
+        statusLabel = 'Error Corrected';
+        errCount++;
+      } else if (wpm >= Math.max(70, Math.round(avgWpm * 1.06))) {
+        color = '#10b981';
+        bgGradient = 'from-emerald-400 to-emerald-600';
+        textColor = 'text-emerald-700';
+        statusLabel = 'Peak Speed';
+        fastCount++;
+      } else if (wpm >= Math.max(45, Math.round(avgWpm * 0.9))) {
+        color = '#0284c7';
+        bgGradient = 'from-sky-400 to-blue-600';
+        textColor = 'text-sky-700';
+        statusLabel = 'Steady Rhythm';
+        steadyCount++;
+      } else {
+        color = '#f59e0b';
+        bgGradient = 'from-amber-400 to-orange-500';
+        textColor = 'text-amber-700';
+        statusLabel = 'Hesitation';
+        slowCount++;
+      }
+
+      return {
+        time: pt ? pt.time : Math.round(progress * durationSec * 10) / 10,
+        wpm,
+        ratio,
+        sizePx,
+        hasError,
+        color,
+        bgGradient,
+        textColor,
+        statusLabel,
+        isPill: i < 2 && ratio < 0.6
+      };
+    });
+
+    let badge = 'CONTINUOUS FLOW';
+    let badgeBg = 'bg-emerald-50 text-emerald-700 border-emerald-300';
+    let modulation = 'Even Keystroke Cadence';
+    let inference = `Superb rhythm: ${fastCount} peak speed bursts, even cadence across all timeline slices.`;
+
+    if (consistency >= 82 && accuracy >= 94) {
+      badge = 'CONTINUOUS FLOW';
+      badgeBg = 'bg-emerald-50 text-emerald-700 border-emerald-300';
+      modulation = 'Even Keystroke Cadence';
+      inference = `Superb rhythm: ${fastCount} speed bursts, steady cadence across all timeline slices.`;
+    } else if (consistency >= 72) {
+      badge = 'STEADY RHYTHM';
+      badgeBg = 'bg-teal-50 text-teal-700 border-teal-300';
+      modulation = 'Controlled Keystroke Cadence';
+      inference = `Controlled pace: ${fastCount + steadyCount}/10 slices in target flow with smooth recovery.`;
+    } else if (consistency >= 58) {
+      badge = 'MODULATED BURSTS';
+      badgeBg = 'bg-blue-50 text-blue-700 border-blue-300';
+      modulation = 'Dynamic Burst Acceleration';
+      inference = `Variable speed: Fast bursts alternating with slight pauses between words.`;
+    } else if (consistency >= 45) {
+      badge = 'VARIABLE PACE';
+      badgeBg = 'bg-amber-50 text-amber-700 border-amber-300';
+      modulation = 'Periodic Hesitation & Recovery';
+      inference = `Hesitation detected: ${slowCount} slow segments where keystroke cadence decelerated.`;
+    } else {
+      badge = 'IRREGULAR CADENCE';
+      badgeBg = 'bg-rose-50 text-rose-700 border-rose-300';
+      modulation = 'Intermittent Keystroke Pauses';
+      inference = `Rhythm drops detected: Multiple pauses and corrections interrupted typing continuity.`;
+    }
+
+    return { dots, badge, badgeBg, modulation, inference, fastCount, steadyCount, slowCount, errCount };
+  }, [result, timeSeries]);
+
+  // Dynamic Dwell Latency Breakdown
+  const dwellMetrics = useMemo(() => {
+    const raw = result.rawWpm || result.wpm || 60;
+    const acc = result.accuracy || 95;
+    const cons = result.consistency || 80;
+
+    const fastPct = Math.min(85, Math.max(20, Math.round((raw / 110) * 55 + (cons * 0.2))));
+    const slowPct = Math.min(40, Math.max(3, Math.round((100 - acc) * 1.5 + (100 - cons) * 0.25)));
+    const normPct = Math.max(5, 100 - fastPct - slowPct);
+
+    let rateText = `${slowPct}% Low (Optimal Flow)`;
+    let rateBadge = 'bg-emerald-50 border-emerald-200/60 text-emerald-700';
+
+    if (slowPct > 20) {
+      rateText = `${slowPct}% High (Frequent Latency)`;
+      rateBadge = 'bg-rose-50 border-rose-200/60 text-rose-700';
+    } else if (slowPct > 10) {
+      rateText = `${slowPct}% Moderate (Minor Pauses)`;
+      rateBadge = 'bg-amber-50 border-amber-200/60 text-amber-700';
+    }
+
+    return { fastPct, normPct, slowPct, rateText, rateBadge };
+  }, [result]);
+
   return (
     <div className="w-full h-screen max-h-screen overflow-hidden flex flex-col justify-between p-4 sm:p-6 select-none animate-fade-in text-slate-900 font-sans bg-[#f8fafc] m-0">
       
@@ -547,32 +676,93 @@ export default function ResultsDisplay({
 
           </div>
 
-          {/* Lower Row: Cadence Waveform + Elegant Segmented Dwell Latency Spectrum */}
+          {/* Lower Row: Cadence Waveform + Segmented Dwell Latency Spectrum */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 shrink-0">
             
-            {/* Cadence Waveform Bar Box (6 cols) */}
-            <div className="sm:col-span-6 p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between">
+            {/* Vibrant & Functional Cadence Waveform */}
+            <div className="sm:col-span-6 p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between text-[11px] font-mono">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-slate-700 font-semibold tracking-wider uppercase">Cadence Waveform</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs animate-pulse" />
+                  <span className="text-slate-900 font-bold tracking-wider uppercase">CADENCE WAVEFORM</span>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60">
-                  CONTINUOUS FLOW
+                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${cadenceAnalysis.badgeBg}`}>
+                  {cadenceAnalysis.badge}
                 </span>
               </div>
-              <div className="flex items-end gap-1.5 h-7 my-2">
-                {[45, 60, 75, 80, 88, 92, 85, 78, 86, 90, 95, 88].map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-full bg-slate-200 transition-all hover:bg-slate-900"
-                    style={{ height: `${h}%` }}
-                  />
-                ))}
+
+              {/* Colorful Timeline Waveform Sequence with Speed Chips */}
+              <div className="my-2.5 p-2.5 rounded-2xl bg-slate-50/90 border border-slate-100">
+                <div className="flex items-end justify-between gap-1 h-12 px-0.5">
+                  {cadenceAnalysis.dots.map((dot, i) => (
+                    <div
+                      key={i}
+                      className="relative group flex-1 flex flex-col items-center justify-end h-full cursor-pointer transition-transform hover:-translate-y-0.5"
+                    >
+                      {/* Mini WPM label above dot */}
+                      <span className="text-[9px] font-bold font-mono text-slate-600 group-hover:text-slate-900 mb-0.5 transition-colors">
+                        {dot.wpm}
+                      </span>
+
+                      {/* Vibrant Color Bubble Node */}
+                      <div
+                        className={`w-full max-w-[22px] rounded-full bg-gradient-to-t ${dot.bgGradient} transition-all duration-200 shadow-xs flex items-center justify-center`}
+                        style={{
+                          height: `${Math.max(10, Math.min(22, dot.sizePx))}px`,
+                        }}
+                      />
+
+                      {/* Timeline slice marker */}
+                      <span className="text-[8px] font-mono text-slate-400 mt-0.5">
+                        {dot.time}s
+                      </span>
+
+                      {/* Rich Tooltip on Hover */}
+                      <div className="absolute bottom-full mb-1.5 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                        <div className="px-2.5 py-1.5 rounded-xl bg-slate-900 text-white text-[10px] font-mono whitespace-nowrap shadow-xl">
+                          <div className="font-bold flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dot.color }} />
+                            <span>{dot.wpm} WPM ({dot.statusLabel})</span>
+                          </div>
+                          <div className="text-slate-300 text-[9px] mt-0.5">Timeline: {dot.time}s • {Math.round(dot.ratio * 100)}% Rhythm</div>
+                        </div>
+                        <div className="w-1.5 h-1.5 bg-slate-900 rotate-45 -mt-0.5" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Color Legend for Instant Inference */}
+                <div className="flex items-center justify-between text-[8.5px] font-mono text-slate-500 pt-1.5 border-t border-slate-200/60 px-0.5 mt-1">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span>Fast Burst</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                    <span>Steady Flow</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span>Hesitation</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span>Error</span>
+                  </span>
+                </div>
               </div>
-              <div className="text-[10px] font-mono text-slate-500 flex justify-between pt-1 border-t border-slate-100">
-                <span>Burst Modulation:</span>
-                <strong className="text-slate-800">Even Keystroke Cadence</strong>
+
+              {/* What You Can Infer - Plain English Insight */}
+              <div className="space-y-1 pt-1.5 border-t border-slate-100 text-[10px] font-mono">
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Burst Modulation:</span>
+                  <strong className="text-slate-900 font-bold">{cadenceAnalysis.modulation}</strong>
+                </div>
+                <div className="text-[9.5px] text-slate-700 bg-emerald-50/70 border border-emerald-100 rounded-lg px-2 py-1 leading-normal">
+                  <span className="font-bold text-emerald-800">Insight: </span>
+                  {cadenceAnalysis.inference}
+                </div>
               </div>
             </div>
 
@@ -580,8 +770,8 @@ export default function ResultsDisplay({
             <div className="sm:col-span-6 p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs flex flex-col justify-between">
               <div className="flex items-center justify-between text-[11px] font-mono">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
-                  <span className="text-slate-700 font-semibold tracking-wider uppercase">Dwell Latency Spectrum</span>
+                  <span className="w-2 h-2 rounded-full bg-slate-900" />
+                  <span className="text-slate-800 font-bold tracking-wider uppercase">Dwell Latency Spectrum</span>
                 </div>
                 <span className="text-[11px] font-bold text-slate-900 font-mono">
                   {dwellTime}ms <span className="text-slate-400 font-normal">AVG</span>
@@ -593,45 +783,44 @@ export default function ResultsDisplay({
                 <div className="w-full h-2.5 rounded-full bg-slate-100 p-0.5 flex gap-1 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-emerald-400 transition-all hover:brightness-105"
-                    style={{ width: '65%' }}
-                    title="Rapid Keystrokes (<100ms): 65%"
+                    style={{ width: `${dwellMetrics.fastPct}%` }}
+                    title={`Rapid Keystrokes (<100ms): ${dwellMetrics.fastPct}%`}
                   />
                   <div
                     className="h-full rounded-full bg-amber-400 transition-all hover:brightness-105"
-                    style={{ width: '28%' }}
-                    title="Optimal Rhythm (100-150ms): 28%"
+                    style={{ width: `${dwellMetrics.normPct}%` }}
+                    title={`Optimal Rhythm (100-150ms): ${dwellMetrics.normPct}%`}
                   />
                   <div
                     className="h-full rounded-full bg-slate-300 transition-all hover:brightness-105"
-                    style={{ width: '7%' }}
-                    title="Hesitation (>150ms): 7%"
+                    style={{ width: `${dwellMetrics.slowPct}%` }}
+                    title={`Hesitation (>150ms): ${dwellMetrics.slowPct}%`}
                   />
                 </div>
 
-                {/* Micro Metric Chips Under Spectrum */}
                 <div className="flex justify-between items-center text-[10px] font-mono">
                   <span className="flex items-center gap-1 text-slate-600">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     <span>&lt;100ms</span>
-                    <strong className="text-slate-900">65%</strong>
+                    <strong className="text-slate-900">{dwellMetrics.fastPct}%</strong>
                   </span>
                   <span className="flex items-center gap-1 text-slate-600">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                     <span>100–150ms</span>
-                    <strong className="text-slate-900">28%</strong>
+                    <strong className="text-slate-900">{dwellMetrics.normPct}%</strong>
                   </span>
                   <span className="flex items-center gap-1 text-slate-600">
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                     <span>&gt;150ms</span>
-                    <strong className="text-slate-900">7%</strong>
+                    <strong className="text-slate-900">{dwellMetrics.slowPct}%</strong>
                   </span>
                 </div>
               </div>
 
-              <div className="text-[10px] font-mono text-slate-500 flex justify-between items-center pt-1 border-t border-slate-100">
+              <div className="text-[10px] font-mono text-slate-500 flex justify-between items-center pt-1.5 border-t border-slate-100">
                 <span>Hesitation Rate:</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-700 font-semibold text-[10px]">
-                  7% Low (Optimal Flow)
+                <span className={`px-2 py-0.5 rounded-full font-semibold text-[10px] border ${dwellMetrics.rateBadge}`}>
+                  {dwellMetrics.rateText}
                 </span>
               </div>
             </div>

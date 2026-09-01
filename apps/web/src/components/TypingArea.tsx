@@ -32,9 +32,9 @@ const TIME_OPTIONS = [15, 30, 60, 120];
 const WORD_OPTIONS = [10, 25, 50, 100];
 const WORD_SETS = ['English Standard', 'English 1k', 'Tech & Code'];
 
-const FONT_SIZE = 40;
-const LINE_HEIGHT = 1.65;
-const STAGE_HEIGHT = 264;
+const FONT_SIZE = 48;
+const LINE_HEIGHT = 1.5;
+const STAGE_HEIGHT = 144; // Exact 2-line standard viewport (72px * 2)
 
 export default function TypingArea({
   words, wordSetId,
@@ -58,11 +58,27 @@ export default function TypingArea({
   const [isFinished, setIsFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [capsLock, setCapsLock] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Global Caps Lock listener
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (typeof e.getModifierState === 'function') {
+        setCapsLock(e.getModifierState('CapsLock'));
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keyup', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('keyup', handleKey);
+    };
+  }, []);
 
   useEffect(() => {
     setTypedWords(['']);
@@ -73,8 +89,32 @@ export default function TypingArea({
     setTimeLeft(timeLimit);
     setStartTime(null);
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (wordsRef.current) { wordsRef.current.scrollTop = 0; }
     inputRef.current?.focus();
   }, [words, timeLimit, mode, wordCountLimit]);
+
+  // Smooth line-based scroll: runs ONLY when moving to a new word, NEVER on individual keypresses
+  useEffect(() => {
+    if (!wordsRef.current || isFinished) return;
+    const wordEl = wordsRef.current.querySelector(`[data-word-idx="${currentWordIndex}"]`) as HTMLElement | null;
+    if (!wordEl) return;
+
+    const lineH = Math.round(FONT_SIZE * LINE_HEIGHT);
+    const wordTop = wordEl.offsetTop;
+    const currentLine = Math.round(wordTop / lineH);
+
+    // When on Line 2 or beyond (currentLine >= 2), scroll so current line is on the bottom line (row 2)
+    if (currentLine >= 2) {
+      const targetScroll = (currentLine - 1) * lineH;
+      if (Math.abs(wordsRef.current.scrollTop - targetScroll) > 4) {
+        wordsRef.current.scrollTo({ top: targetScroll, behavior: 'smooth' });
+      }
+    } else {
+      if (wordsRef.current.scrollTop !== 0) {
+        wordsRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  }, [currentWordIndex, isFinished]);
 
   const updateCaret = useCallback(() => {
     if (!wordsRef.current || !caretRef.current || isFinished) return;
@@ -110,17 +150,16 @@ export default function TypingArea({
         const charRect = lastChar.getBoundingClientRect();
         left = charRect.right - wordsRect.left + wordsRef.current.scrollLeft;
         top = charRect.top - wordsRect.top + wordsRef.current.scrollTop + 4;
+      } else {
+        const wordRect = wordEl.getBoundingClientRect();
+        left = wordRect.right - wordsRect.left + wordsRef.current.scrollLeft;
+        top = wordRect.top - wordsRect.top + wordsRef.current.scrollTop + 4;
       }
     }
 
     caretRef.current.style.left = `${Math.round(left)}px`;
     caretRef.current.style.top = `${Math.round(top)}px`;
     caretRef.current.style.display = 'block';
-
-    const lineH = Math.round(FONT_SIZE * LINE_HEIGHT);
-    if (top > lineH * 2.8) {
-      wordsRef.current.scrollTop += lineH;
-    }
   }, [currentWordIndex, currentCharIndex, isFinished]);
 
   useLayoutEffect(() => {
@@ -157,6 +196,9 @@ export default function TypingArea({
   }, [timeLeft, isStarted, isFinished, mode, timeLimit, finishTest]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (typeof e.getModifierState === 'function') {
+      setCapsLock(e.getModifierState('CapsLock'));
+    }
     if (isFinished || isLoadingWords || !words.length) return;
     if (e.key === 'Tab') { e.preventDefault(); onRestart(); return; }
     if (e.key === 'Escape') { e.preventDefault(); inputRef.current?.focus(); return; }
@@ -213,16 +255,22 @@ export default function TypingArea({
     >
       <input ref={inputRef} type="text"
         className="absolute opacity-0 pointer-events-none w-0 h-0"
-        onKeyDown={handleKeyDown} autoFocus />
+        onKeyDown={handleKeyDown}
+        onKeyUp={(e) => {
+          if (typeof e.getModifierState === 'function') {
+            setCapsLock(e.getModifierState('CapsLock'));
+          }
+        }}
+        autoFocus />
 
       {/* ── Full Screen Frosted Glass Sheet with Square Corners ── */}
       <div className="w-full h-full rounded-none bg-white/[0.14] backdrop-blur-2xl overflow-hidden flex flex-col justify-between m-0 p-0">
 
         {/* ── Top Bar: Back Button + Controls + 100% Bright Timer ── */}
-        <div className="flex items-center justify-between px-8 sm:px-16 py-4 border-b border-white/[0.1]">
+        <div className="flex items-center justify-between px-3.5 sm:px-16 py-3 sm:py-4 border-b border-white/[0.1]">
 
           {/* Left Controls with Minimal Dashboard & Hub Buttons */}
-          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar">
             {onBackToDashboard ? (
               <button
                 onClick={onBackToDashboard}
@@ -277,8 +325,8 @@ export default function TypingArea({
           </div>
 
           {/* Solid 100% Bright Timer (Never Fades) */}
-          <div className="flex items-baseline gap-2 shrink-0 pl-6">
-            <span className="text-4xl sm:text-5xl font-light tabular-nums text-white drop-shadow-xs">
+          <div className="flex items-baseline gap-1.5 sm:gap-2 shrink-0 pl-3 sm:pl-6">
+            <span className="text-3xl sm:text-5xl font-light tabular-nums text-white drop-shadow-xs">
               {mode === 'time' ? timeLeft : currentWordIndex + 1}
             </span>
             <span className="text-xs sm:text-sm font-semibold uppercase tracking-widest text-[#94a3b8]">
@@ -287,8 +335,21 @@ export default function TypingArea({
           </div>
         </div>
 
-        {/* ── Centered 4-Line Inset Word Stage ── */}
-        <div className="px-12 sm:px-24 md:px-32 lg:px-44 py-8 sm:py-12 my-auto flex items-center justify-center">
+        {/* ── Caps Lock Alert Banner ── */}
+        {capsLock && (
+          <div className="flex items-center justify-center -mb-4 mt-3 px-3">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/25 border border-amber-400/50 text-amber-300 text-xs font-bold uppercase tracking-wider shadow-lg backdrop-blur-md animate-pulse">
+              <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3l7 7h-4v7H9v-7H5l7-7z" />
+                <path d="M5 21h14" />
+              </svg>
+              <span>Caps Lock is ON</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── Centered 2-Line Inset Word Stage ── */}
+        <div className="px-4 sm:px-20 md:px-32 lg:px-44 py-6 sm:py-12 my-auto flex items-center justify-center">
           <div
             ref={wordsRef}
             className="relative w-full overflow-hidden scroll-smooth font-sans"

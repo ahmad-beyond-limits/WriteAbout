@@ -137,8 +137,8 @@ function SwiftTypeDashboard({
       <div className="relative z-10 w-full max-w-6xl mx-auto space-y-6 flex-1 flex flex-col justify-between">
         
         {/* ── Top Header ── */}
-        <header className="flex items-center justify-between px-6 py-3.5 rounded-2xl bg-white/85 border border-[#e1e9df] shadow-[0_4px_24px_rgba(27,43,32,0.03)] backdrop-blur-xl shrink-0 w-full">
-          <div className="flex items-center gap-3">
+        <header className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-3.5 rounded-2xl bg-white/85 border border-[#e1e9df] shadow-[0_4px_24px_rgba(27,43,32,0.03)] backdrop-blur-xl shrink-0 w-full">
+          <div className="flex items-center justify-between sm:justify-start gap-3">
             <Link
               href="/hub"
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#edf4ed] hover:bg-[#e1ede1] text-[#2c4731] text-xs font-semibold tracking-wider uppercase transition-colors"
@@ -148,7 +148,7 @@ function SwiftTypeDashboard({
               </svg>
               <span>Workspace Hub</span>
             </Link>
-            <span className="w-px h-4 bg-[#dbe6d9]" />
+            <span className="hidden sm:inline-block w-px h-4 bg-[#dbe6d9]" />
             <div className="flex items-center gap-2">
               <h1 className="text-sm sm:text-base font-semibold tracking-tight text-[#0f172a] font-['Sora',sans-serif]">
                 SwiftType
@@ -156,10 +156,10 @@ function SwiftTypeDashboard({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-end gap-3">
             <button
               onClick={onStartTest}
-              className="px-5 py-2 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-[#f2f7f2] text-xs font-bold uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(30,58,36,0.18)] flex items-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-5 py-2.5 sm:py-2 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-[#f2f7f2] text-xs font-bold uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(30,58,36,0.18)] flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Start Speed Test</span>
               <span className="text-sm">→</span>
@@ -562,17 +562,72 @@ function SwiftTypeContent() {
     setLastResult(null);
   };
 
+  const [showMobileNotice, setShowMobileNotice] = useState(false);
+
+  const executeStartTest = () => {
+    setLastResult(null);
+    fetchWords();
+    setCurrentView('test');
+  };
+
+  const handleStartTest = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setShowMobileNotice(true);
+    } else {
+      executeStartTest();
+    }
+  };
+
   if (currentView === 'dashboard') {
     return (
-      <SwiftTypeDashboard
-        onStartTest={() => {
-          setLastResult(null);
-          fetchWords();
-          setCurrentView('test');
-        }}
-        userId={activeUserId}
-        userLastName={currentUser?.lastName || currentUser?.username}
-      />
+      <>
+        <SwiftTypeDashboard
+          onStartTest={handleStartTest}
+          userId={activeUserId}
+          userLastName={currentUser?.lastName || currentUser?.username}
+        />
+
+        {showMobileNotice && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-sm rounded-3xl p-6 bg-white/95 border border-[#dbe6d9] shadow-2xl space-y-4 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-[#edf4ed] text-[#1e3a24] flex items-center justify-center mx-auto shadow-xs">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-[#0f172a] font-['Sora',sans-serif]">
+                  Best on Desktop & Laptop
+                </h3>
+                <p className="text-xs text-[#556b5a] leading-relaxed">
+                  SwiftType is a high-speed typing sprint designed for physical keyboards. It works best on a desktop or laptop screen.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <Link
+                  href="/hub"
+                  className="w-full py-2.5 px-4 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer text-center"
+                >
+                  ← Back to Hub
+                </Link>
+                <button
+                  onClick={() => {
+                    setShowMobileNotice(false);
+                    executeStartTest();
+                  }}
+                  className="w-full py-2 px-4 rounded-2xl text-[11px] text-[#556b5a] hover:text-[#1e3a24] font-medium transition-colors text-center cursor-pointer"
+                >
+                  Continue on Mobile Anyway →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
