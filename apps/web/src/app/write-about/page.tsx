@@ -208,16 +208,16 @@ function InsightsScreen({
             })()}
           </h1>
           <p style={{ fontSize: '0.8rem', color: '#556b5a', margin: '0.25rem 0 0 0' }}>
-            WriteAbout Real-Time Dual-Process Evaluation & Lexical Analytics
+            Timed image writing practice and performance insights
           </p>
         </div>
-        {/* Master Asymmetric Editorial Grid: Writing Velocity on Left, 3 Analytics Instruments on Right */}
+        {/* Master Asymmetric Editorial Grid: Writing Speed on Left, 3 Instruments on Right */}
         <div className="insights-dashboard-grid">
           {/* Left Column: Feature Hero Velocity Card (Full Height) */}
           <div className="insights-hero-card">
             <div>
               <div className="insights-card-header">
-                <span className="insights-card-label">Writing Velocity</span>
+                <span className="insights-card-label">Writing Speed & Volume</span>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e3a24', background: '#e8f3ea', padding: '2px 8px', borderRadius: '100px' }}>
                   60s SPRINT
                 </span>
@@ -227,7 +227,7 @@ function InsightsScreen({
                 <span className="insights-hero-unit">avg words / session</span>
               </div>
               <p style={{ fontSize: '13px', color: '#2b4733', lineHeight: 1.55, margin: '0 0 1.25rem 0' }}>
-                Measures descriptive flow, lexical precision, and response density under timed visual stimulus.
+                Measures descriptive flow, word choice, and output volume under timed visual exercises.
               </p>
 
               {/* Extra Insight Telemetry inside Hero */}
@@ -237,7 +237,7 @@ function InsightsScreen({
                   <span style={{ fontSize: '12px', fontWeight: 700, color: '#064e3b' }}>≥ 40 wpm (Optimal)</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.7)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(167, 243, 208, 0.5)' }}>
-                  <span style={{ fontSize: '12px', color: '#1b2b20', fontWeight: 500 }}>Cadence Index</span>
+                  <span style={{ fontSize: '12px', color: '#1b2b20', fontWeight: 500 }}>Output Rate</span>
                   <span style={{ fontSize: '12px', fontWeight: 700, color: '#064e3b' }}>{avgWords > 0 ? (avgWords / 60).toFixed(2) : '0.00'} words/sec</span>
                 </div>
               </div>
@@ -248,13 +248,13 @@ function InsightsScreen({
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                 </svg>
-                {totalPractices} Sessions Logged
+                {totalPractices} Sessions Completed
               </span>
               <span className="insights-hero-tag">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
                 </svg>
-                {totalWords} Words Crafted
+                {totalWords} Words Written
               </span>
             </div>
           </div>

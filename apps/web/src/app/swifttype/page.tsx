@@ -181,18 +181,18 @@ function SwiftTypeDashboard({
               })()}
             </h1>
             <p className="text-xs text-[#64748b] mt-0.5">
-              SwiftType Real-Time Kinetic Typing & Velocity Analytics
+              Typing speed and accuracy overview
             </p>
           </div>
         </div>
 
-        {/* ── Key Telemetry Cards (6 Diagnostic Modules) ── */}
+        {/* ── Key Performance Cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
           
           {/* Card 1: Peak WPM */}
           <div className="p-4 sm:p-5 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_4px_20px_rgba(27,43,32,0.03)] hover:border-[#c5d8c3] transition-all flex flex-col justify-between">
             <span className="text-[11px] font-medium uppercase tracking-wider text-[#64748b]">
-              Peak Velocity
+              Peak Speed
             </span>
             <div className="my-2.5 flex items-baseline gap-1">
               <span className="text-4xl sm:text-[40px] font-light text-[#1e3a24] font-['Sora',sans-serif] tracking-tight leading-none">
@@ -200,13 +200,13 @@ function SwiftTypeDashboard({
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">WPM</span>
             </div>
-            <span className="text-[10.5px] text-[#059669] font-medium">Record Pace</span>
+            <span className="text-[10.5px] text-[#059669] font-medium">Best Record</span>
           </div>
 
           {/* Card 2: Avg WPM */}
           <div className="p-4 sm:p-5 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_4px_20px_rgba(27,43,32,0.03)] hover:border-[#c5d8c3] transition-all flex flex-col justify-between">
             <span className="text-[11px] font-medium uppercase tracking-wider text-[#64748b]">
-              Avg Velocity
+              Average Speed
             </span>
             <div className="my-2.5 flex items-baseline gap-1">
               <span className="text-4xl sm:text-[40px] font-light text-[#1e293b] font-['Sora',sans-serif] tracking-tight leading-none">
@@ -214,13 +214,13 @@ function SwiftTypeDashboard({
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">WPM</span>
             </div>
-            <span className="text-[10.5px] text-[#64748b] font-normal">Mean Rhythm</span>
+            <span className="text-[10.5px] text-[#64748b] font-normal">Overall Average</span>
           </div>
 
           {/* Card 3: Accuracy */}
           <div className="p-4 sm:p-5 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_4px_20px_rgba(27,43,32,0.03)] hover:border-[#c5d8c3] transition-all flex flex-col justify-between">
             <span className="text-[11px] font-medium uppercase tracking-wider text-[#64748b]">
-              Precision
+              Accuracy
             </span>
             <div className="my-2.5 flex items-baseline gap-1">
               <span className="text-4xl sm:text-[40px] font-light text-[#0f172a] font-['Sora',sans-serif] tracking-tight leading-none">
@@ -228,10 +228,10 @@ function SwiftTypeDashboard({
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">%</span>
             </div>
-            <span className="text-[10.5px] text-[#059669] font-medium">Keystroke Accuracy</span>
+            <span className="text-[10.5px] text-[#059669] font-medium">Correct Keystrokes</span>
           </div>
 
-          {/* Card 4: Stability */}
+          {/* Card 4: Consistency */}
           <div className="p-4 sm:p-5 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_4px_20px_rgba(27,43,32,0.03)] hover:border-[#c5d8c3] transition-all flex flex-col justify-between">
             <span className="text-[11px] font-medium uppercase tracking-wider text-[#64748b]">
               Consistency
@@ -242,13 +242,13 @@ function SwiftTypeDashboard({
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">%</span>
             </div>
-            <span className="text-[10.5px] text-[#0284c7] font-medium">Cadence Uniformity</span>
+            <span className="text-[10.5px] text-[#0284c7] font-medium">Typing Rhythm</span>
           </div>
 
           {/* Card 5: Total Volume */}
           <div className="p-4 sm:p-5 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_4px_20px_rgba(27,43,32,0.03)] hover:border-[#c5d8c3] transition-all flex flex-col justify-between">
             <span className="text-[11px] font-medium uppercase tracking-wider text-[#64748b]">
-              Total Volume
+              Total Characters
             </span>
             <div className="my-2.5 flex items-baseline gap-1">
               <span className="text-4xl sm:text-[40px] font-light text-[#1e293b] font-['Sora',sans-serif] tracking-tight leading-none">
@@ -256,7 +256,7 @@ function SwiftTypeDashboard({
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">chars</span>
             </div>
-            <span className="text-[10.5px] text-[#64748b] font-normal">Output Volume</span>
+            <span className="text-[10.5px] text-[#64748b] font-normal">Characters Typed</span>
           </div>
 
           {/* Card 6: Total Sessions */}
@@ -270,7 +270,7 @@ function SwiftTypeDashboard({
               </span>
               <span className="text-xs font-normal text-[#94a3b8]">runs</span>
             </div>
-            <span className="text-[10.5px] text-[#059669] font-medium">Total Sessions</span>
+            <span className="text-[10.5px] text-[#059669] font-medium">Total Tests</span>
           </div>
 
         </div>
@@ -283,10 +283,10 @@ function SwiftTypeDashboard({
             <div className="flex items-center justify-between pb-3 border-b border-[#edf3ec] mb-4">
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-[#0f172a] font-['Sora',sans-serif]">
-                  Velocity & Precision Timeline
+                  Speed & Accuracy History
                 </h3>
                 <span className="text-[11px] text-[#94a3b8]">
-                  Recent test progression (Net WPM vs Raw WPM)
+                  Your recent test scores over time (Net WPM vs Raw WPM)
                 </span>
               </div>
               <div className="flex items-center gap-4 text-xs">
@@ -335,17 +335,17 @@ function SwiftTypeDashboard({
             <div className="space-y-4">
               <div className="pb-3 border-b border-[#edf3ec]">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-[#0f172a] font-['Sora',sans-serif]">
-                  Keystroke Dynamics
+                  Typing Speed Breakdown
                 </h3>
                 <span className="text-[11px] text-[#94a3b8]">
-                  Dwell latency & input stability
+                  Key press speed distribution
                 </span>
               </div>
 
               {/* Dwell Distribution */}
               <div>
                 <div className="flex justify-between items-center text-xs mb-2">
-                  <span className="text-[#475569] font-medium">Dwell Latency Spectrum</span>
+                  <span className="text-[#475569] font-medium">Key Press Speed</span>
                   <strong className="text-[#0f172a] font-['Sora',sans-serif]">
                     {stats.avgWpm > 0 ? Math.round(60000 / (stats.avgWpm * 5)) : 120}ms AVG
                   </strong>
@@ -353,22 +353,22 @@ function SwiftTypeDashboard({
 
                 <div className="w-full h-3 rounded-full bg-[#f1f5f9] p-0.5 flex gap-1 overflow-hidden">
                   <div className="h-full rounded-full bg-[#10b981]" style={{ width: '65%' }} title="Fast (<100ms): 65%" />
-                  <div className="h-full rounded-full bg-[#f59e0b]" style={{ width: '25%' }} title="Rhythm (100-150ms): 25%" />
-                  <div className="h-full rounded-full bg-[#f87171]" style={{ width: '10%' }} title="Hesitation (>150ms): 10%" />
+                  <div className="h-full rounded-full bg-[#f59e0b]" style={{ width: '25%' }} title="Normal (100-150ms): 25%" />
+                  <div className="h-full rounded-full bg-[#f87171]" style={{ width: '10%' }} title="Slow (>150ms): 10%" />
                 </div>
 
                 <div className="flex justify-between items-center text-[10.5px] mt-2 text-[#64748b]">
                   <span className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                    <span>&lt;100ms (65%)</span>
+                    <span>Fast (&lt;100ms)</span>
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-                    <span>100-150ms (25%)</span>
+                    <span>Normal (100-150ms)</span>
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#f87171]" />
-                    <span>&gt;150ms (10%)</span>
+                    <span>Slow (&gt;150ms)</span>
                   </span>
                 </div>
               </div>

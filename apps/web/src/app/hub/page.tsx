@@ -258,25 +258,25 @@ export default function HubPage() {
     const speedVector = (p1_velocity + p5_precision) / 2;
     const nuanceVector = (p2_lexical + p3_syntactic + p4_context) / 3;
 
-    let personaName = 'Emerging Practitioner';
-    let personaDesc = 'Complete typing tests and visual practices to calibrate your live cognitive archetype.';
+    let personaName = 'Beginner';
+    let personaDesc = 'Complete typing tests and writing exercises to track your skill profile.';
 
     if (hasTyping || hasPractices) {
       if (speedVector >= 3.8 && nuanceVector >= 3.8) {
-        personaName = 'Eloquent Virtuoso';
-        personaDesc = 'Fluid drafting velocity paired with high syntactic depth.';
+        personaName = 'Fast & Expressive';
+        personaDesc = 'Fast typing speed paired with strong vocabulary and expressive writing.';
       } else if (speedVector < 3.8 && nuanceVector >= 3.8) {
-        personaName = 'Precision Architect';
-        personaDesc = 'Structured prose with exacting syntactic precision.';
+        personaName = 'Thoughtful Writer';
+        personaDesc = 'Structured sentences with careful word choice and high accuracy.';
       } else if (speedVector >= 3.8 && nuanceVector < 3.8) {
-        personaName = 'Kinetic Storyteller';
-        personaDesc = 'Rapid drafting momentum and narrative velocity.';
+        personaName = 'Speed Writer';
+        personaDesc = 'Fast typing speed with quick drafting momentum.';
       } else if (compositeScore >= 2.5) {
-        personaName = 'Balanced Polymath';
-        personaDesc = 'Balanced cadence across output pace and sentence flow.';
+        personaName = 'Well-Rounded Learner';
+        personaDesc = 'Steady typing pace and good sentence structure across exercises.';
       } else {
-        personaName = 'Emerging Wordsmith';
-        personaDesc = 'Building foundational velocity and modifier range.';
+        personaName = 'Developing Learner';
+        personaDesc = 'Building fundamental typing speed and descriptive writing skills.';
       }
     }
 
@@ -287,11 +287,11 @@ export default function HubPage() {
       score: compositeScore,
       rankNumber,
       indicators: [
-        { label: 'Kinetic Velocity', description: 'Keystroke pace & speed', score: p1_velocity },
-        { label: 'Lexical Richness', description: 'Vocabulary & modifiers', score: p2_lexical },
-        { label: 'Syntactic Cadence', description: 'Sentence structure & flow', score: p3_syntactic },
-        { label: 'Context Synthesis', description: 'Visual alignment', score: p4_context },
-        { label: 'Typographic Precision', description: 'Accuracy & consistency', score: p5_precision }
+        { label: 'Typing Speed', description: 'Keystroke pace & WPM', score: p1_velocity },
+        { label: 'Vocabulary Depth', description: 'Word choice & modifiers', score: p2_lexical },
+        { label: 'Sentence Flow', description: 'Structure & grammar', score: p3_syntactic },
+        { label: 'Context Relevance', description: 'Image description quality', score: p4_context },
+        { label: 'Typing Accuracy', description: 'Keystroke precision & consistency', score: p5_precision }
       ]
     };
   }, [typingTests, practices]);
@@ -379,12 +379,12 @@ export default function HubPage() {
               })()}
             </h1>
             <p className="text-xs text-[#556b5a] mt-0.5">
-              Dual-competency cognitive diagnostic & performance hub
+              Track your typing speed and writing performance
             </p>
           </div>
         </div>
 
-        {/* ── Premium Golden-Obsidian Cognitive Ranking Card ── */}
+        {/* ── Premium Golden Performance Ranking Card ── */}
         <section
           className="p-5 sm:p-7 rounded-3xl relative overflow-hidden transition-all duration-300"
           style={{
@@ -409,14 +409,14 @@ export default function HubPage() {
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#d97706] animate-pulse" />
                   <span className="text-[10.5px] font-bold text-[#855307] uppercase tracking-wider">
-                    Cognitive Profile
+                    Performance Overview
                   </span>
                 </div>
 
                 {/* (i) Info Icon to open Ranks Modal */}
                 <button
                   onClick={() => setShowRankInfo(true)}
-                  title="Understand Ranks & Formulation"
+                  title="Understand Ranking System"
                   className="w-5 h-5 rounded-full bg-[#faedd0] border border-[#e6cf98] text-[#855307] hover:bg-[#f3dfb5] hover:text-[#5c3702] flex items-center justify-center text-[11px] font-serif font-bold transition-all cursor-pointer shadow-xs"
                 >
                   i
@@ -654,10 +654,10 @@ export default function HubPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-[#0f172a] font-['Sora',sans-serif]">
-                    Cognitive Ranking Architecture
+                    Skill Ranking System
                   </h3>
                   <p className="text-[11px] text-[#64748b]">
-                    Dual-vector formulation & 5-tier mastery hierarchy
+                    How your performance score and ranks are calculated
                   </p>
                 </div>
               </div>
@@ -672,10 +672,10 @@ export default function HubPage() {
             {/* Modal Content */}
             <div className="space-y-4 text-xs text-[#475569] max-h-[68vh] overflow-y-auto pr-1">
               
-              {/* Section 1: 5-Tier Mastery Progression (1 = Beginner -> 5 = Master) */}
+              {/* Section 1: 5-Level Progression */}
               <div>
                 <h4 className="font-bold text-[#0f172a] text-[11px] uppercase tracking-wider mb-2.5 flex items-center gap-1.5 font-['Sora',sans-serif]">
-                  <span>5-Tier Mastery Progression</span>
+                  <span>5-Level Skill Scale</span>
                   <span className="text-[10px] font-normal text-[#64748b]">(Level 1 → 5)</span>
                 </h4>
                 
@@ -685,7 +685,7 @@ export default function HubPage() {
                       <span className="w-5 h-5 rounded-full bg-[#fde047] text-[#713f12] font-bold text-[10.5px] flex items-center justify-center">5</span>
                       <div>
                         <strong className="text-xs">Rank 5 · Master</strong>
-                        <span className="text-[10.5px] text-[#a16207] block">Flawless keystroke agility & syntactic mastery</span>
+                        <span className="text-[10.5px] text-[#a16207] block">Fast typing speed & advanced, error-free writing</span>
                       </div>
                     </div>
                     <span className="text-xs font-bold font-mono">4.7 – 5.0</span>
@@ -696,7 +696,7 @@ export default function HubPage() {
                       <span className="w-5 h-5 rounded-full bg-[#6ee7b7] text-[#064e3b] font-bold text-[10.5px] flex items-center justify-center">4</span>
                       <div>
                         <strong className="text-xs">Rank 4 · Advanced</strong>
-                        <span className="text-[10.5px] text-[#047857] block">High expressive speed & lexical richness</span>
+                        <span className="text-[10.5px] text-[#047857] block">High typing speed & rich descriptive vocabulary</span>
                       </div>
                     </div>
                     <span className="text-xs font-bold font-mono">4.0 – 4.6</span>
@@ -707,7 +707,7 @@ export default function HubPage() {
                       <span className="w-5 h-5 rounded-full bg-[#86efac] text-[#14532d] font-bold text-[10.5px] flex items-center justify-center">3</span>
                       <div>
                         <strong className="text-xs">Rank 3 · Proficient</strong>
-                        <span className="text-[10.5px] text-[#15803d] block">Consistent cadence & solid clause structure</span>
+                        <span className="text-[10.5px] text-[#15803d] block">Consistent typing rhythm & clear sentence structure</span>
                       </div>
                     </div>
                     <span className="text-xs font-bold font-mono">3.0 – 3.9</span>
@@ -718,7 +718,7 @@ export default function HubPage() {
                       <span className="w-5 h-5 rounded-full bg-[#bbf7d0] text-[#166534] font-bold text-[10.5px] flex items-center justify-center">2</span>
                       <div>
                         <strong className="text-xs">Rank 2 · Developing</strong>
-                        <span className="text-[10.5px] text-[#16a34a] block">Building typing rhythm & phrase variety</span>
+                        <span className="text-[10.5px] text-[#16a34a] block">Building typing pace & descriptive sentence variety</span>
                       </div>
                     </div>
                     <span className="text-xs font-bold font-mono">2.0 – 2.9</span>
@@ -729,7 +729,7 @@ export default function HubPage() {
                       <span className="w-5 h-5 rounded-full bg-[#e2e8f0] text-[#334155] font-bold text-[10.5px] flex items-center justify-center">1</span>
                       <div>
                         <strong className="text-xs text-[#0f172a]">Rank 1 · Beginner</strong>
-                        <span className="text-[10.5px] text-[#64748b] block">Foundational pace & core vocabulary</span>
+                        <span className="text-[10.5px] text-[#64748b] block">Foundational typing speed & basic vocabulary</span>
                       </div>
                     </div>
                     <span className="text-xs font-bold font-mono text-[#0f172a]">1.0 – 1.9</span>
@@ -737,30 +737,30 @@ export default function HubPage() {
                 </div>
               </div>
 
-              {/* Section 2: Mathematical Telemetry Weights */}
+              {/* Section 2: Score Breakdown */}
               <div>
                 <h4 className="font-bold text-[#0f172a] text-[11px] uppercase tracking-wider mb-2 font-['Sora',sans-serif]">
-                  Mathematical Weightings (1.0 - 5.0)
+                  Score Breakdown (1.0 - 5.0)
                 </h4>
                 <div className="space-y-2 bg-[#f8fafc] p-3 rounded-2xl border border-[#e2e8f0]">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#334155]">Kinetic Velocity (WPM vs 60 WPM benchmark)</span>
+                    <span className="text-[#334155]">Typing Speed (WPM pace)</span>
                     <strong className="text-[#0f172a] font-mono">25%</strong>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#334155]">Lexical Richness (Vocabulary diversity & modifiers)</span>
+                    <span className="text-[#334155]">Vocabulary Depth (Word diversity & adjectives)</span>
                     <strong className="text-[#0f172a] font-mono">20%</strong>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#334155]">Syntactic Cadence (Sentence rhythm & clause flow)</span>
+                    <span className="text-[#334155]">Sentence Flow (Grammar & structure)</span>
                     <strong className="text-[#0f172a] font-mono">20%</strong>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#334155]">Context Synthesis (Image prompt grounding)</span>
+                    <span className="text-[#334155]">Context Relevance (Image description accuracy)</span>
                     <strong className="text-[#0f172a] font-mono">20%</strong>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#334155]">Typographic Precision (Accuracy & consistency)</span>
+                    <span className="text-[#334155]">Typing Accuracy (Precision & consistency)</span>
                     <strong className="text-[#0f172a] font-mono">15%</strong>
                   </div>
                 </div>

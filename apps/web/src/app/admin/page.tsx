@@ -329,7 +329,7 @@ export default function AdminPortalPage() {
               })()}
             </h1>
             <p className="text-xs text-[#556b5a] mt-0.5">
-              Platform user directory, security permissions, and telemetry monitoring
+              Manage user accounts, roles, and platform statistics
             </p>
           </div>
         </div>
