@@ -57,7 +57,7 @@ function InsightsScreen({
   username,
   lastName
 }: {
-  onPractice: () => void;
+  onPractice: (specificImageUrl?: string) => void;
   onLogout: () => void;
   onConfigureKey?: () => void;
   userId: number;
@@ -179,7 +179,7 @@ function InsightsScreen({
           <button className="btn-modern-outline" onClick={onLogout} style={{ padding: '8px 20px', fontSize: '13px' }}>
             Logout
           </button>
-          <button className="btn-modern-primary" onClick={onPractice} style={{ padding: '8px 22px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button className="btn-modern-primary" onClick={() => onPractice()} style={{ padding: '8px 22px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             Start Practicing
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12" />
@@ -590,6 +590,21 @@ function InsightsScreen({
                   Dismiss
                 </button>
                 <button
+                  className="btn-modern-outline"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  onClick={() => {
+                    const specificImg = reviewItem.image_url;
+                    setReviewItem(null);
+                    onPractice(specificImg);
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                  </svg>
+                  Practice Again
+                </button>
+                <button
                   className="btn-modern-primary"
                   onClick={() => {
                     setReviewItem(null);
@@ -716,26 +731,33 @@ export default function WriteAboutApp() {
     return () => clearInterval(timer);
   }, [isRunning, isImageLoaded, timeLeft]);
 
-  const executeStartPractice = () => {
+  const [pendingPracticeImage, setPendingPracticeImage] = useState<string | undefined>(undefined);
+
+  const executeStartPractice = (specificImageUrl?: string) => {
     setIsImageLoaded(false);
     setIsRunning(false);
-    getRandomImage();
+    if (specificImageUrl && specificImageUrl.trim().length > 0) {
+      setImageUrl(specificImageUrl);
+    } else {
+      getRandomImage();
+    }
     setTimeLeft(TOTAL_TIME);
     setText('');
     setAnalysis(null);
     setCurrentView('practice');
   };
 
-  const handleStartPractice = () => {
+  const handleStartPractice = (specificImageUrl?: string) => {
     if (!apiKey || apiKey.trim().length === 0) {
       setCurrentView('apikey');
       return;
     }
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setPendingPracticeImage(typeof specificImageUrl === 'string' ? specificImageUrl : undefined);
       setShowMobileNotice(true);
       return;
     }
-    executeStartPractice();
+    executeStartPractice(typeof specificImageUrl === 'string' ? specificImageUrl : undefined);
   };
 
   const submitLog = async () => {
@@ -999,7 +1021,8 @@ export default function WriteAboutApp() {
                 <button
                   onClick={() => {
                     setShowMobileNotice(false);
-                    executeStartPractice();
+                    executeStartPractice(pendingPracticeImage);
+                    setPendingPracticeImage(undefined);
                   }}
                   className="w-full py-2 px-4 rounded-2xl text-[11px] text-[#556b5a] hover:text-[#1e3a24] font-medium transition-colors text-center cursor-pointer"
                 >
@@ -1146,7 +1169,7 @@ export default function WriteAboutApp() {
           </div>
 
           {!isRunning && analysis === null ? (
-            <button className="btn-black" onClick={handleStartPractice}>
+            <button className="btn-black" onClick={() => handleStartPractice()}>
               Start Challenge
             </button>
           ) : (
@@ -1235,8 +1258,19 @@ export default function WriteAboutApp() {
               Insights
             </button>
             <button
+              className="btn-modern-outline"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              onClick={() => executeStartPractice(imageUrl)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              </svg>
+              Practice Again
+            </button>
+            <button
               className="btn-modern-primary"
-              onClick={handleStartPractice}
+              onClick={() => executeStartPractice()}
             >
               Next Image →
             </button>

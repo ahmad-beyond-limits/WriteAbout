@@ -62,15 +62,15 @@ export default function ResultsDisplay({
     return points;
   }, [result]);
 
-  const chartWidth = 740;
-  const chartHeight = 185;
-  const padding = { top: 18, right: 28, bottom: 26, left: 40 };
+  const chartWidth = 920;
+  const chartHeight = 200;
+  const padding = { top: 22, right: 32, bottom: 30, left: 45 };
   const graphW = chartWidth - padding.left - padding.right;
   const graphH = chartHeight - padding.top - padding.bottom;
 
   const maxWpm = useMemo(() => {
-    const peak = Math.max(...timeSeries.map(p => p.wpm), result.wpm * 1.2, 30);
-    return Math.ceil(peak / 20) * 20;
+    const peak = Math.max(...timeSeries.map(p => p.wpm), result.wpm, 30);
+    return Math.max(40, Math.ceil((peak * 1.25) / 20) * 20);
   }, [timeSeries, result.wpm]);
 
   const maxDuration = Math.max(1, Math.round(result.elapsedMilliseconds / 1000));
@@ -357,7 +357,7 @@ export default function ResultsDisplay({
           {/* Lower 2 Split Soft Pastel Aura Cards */}
           <div className="grid grid-cols-2 gap-3.5 shrink-0">
             
-            {/* Split Card A: Precision (Soft Lavender Mist to Whisper Peach Rose) */}
+            {/* Split Card A: Precision & Accuracy Breakdown */}
             <div
               className="relative p-4 rounded-3xl border border-white/80 shadow-[0_8px_20px_-5px_rgba(244,63,94,0.1)] backdrop-blur-2xl overflow-hidden flex flex-col justify-between text-slate-800"
               style={{
@@ -368,40 +368,41 @@ export default function ResultsDisplay({
               <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/10 to-transparent pointer-events-none rounded-3xl" />
 
               <div className="relative z-10 flex items-center justify-between text-[11px] font-semibold text-slate-700">
-                <span>Precision</span>
-                <svg className="w-3 h-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7V17" />
-                </svg>
+                <span className="font-bold uppercase tracking-wider">Accuracy</span>
+                <span className={`text-[9.5px] font-mono px-2 py-0.5 rounded-full font-bold border ${result.incorrectCharacters + result.extraCharacters === 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}>
+                  {result.incorrectCharacters + result.extraCharacters === 0 ? '100% Clean' : `${result.accuracy}% Net`}
+                </span>
               </div>
 
               <div className="relative z-10 my-1 text-center">
-                <span className="text-3xl font-light text-slate-900 font-mono">{result.accuracy}</span>
-                <span className="text-xs text-slate-600 font-mono">%</span>
-                <div className="text-[10px] text-rose-700 font-medium mt-0.5">
-                  {result.incorrectCharacters === 0 ? 'Zero Errors' : `${result.incorrectCharacters} misses`}
+                <span className="text-3xl font-light text-slate-900 font-mono tracking-tight">{result.accuracy}</span>
+                <span className="text-xs text-slate-600 font-mono font-bold">%</span>
+                <div className="text-[10px] font-medium mt-0.5 text-slate-600">
+                  {result.incorrectCharacters + result.extraCharacters === 0 ? (
+                    <span className="text-emerald-700 font-bold">✨ Zero Errors Recorded</span>
+                  ) : (
+                    <span className="text-rose-700 font-bold">{result.incorrectCharacters + result.extraCharacters} Mispresses Detected</span>
+                  )}
                 </div>
               </div>
 
-              {/* Precision Ticker Ruler Graphic */}
-              <div className="relative z-10 my-0.5 flex justify-center">
-                <svg viewBox="0 0 100 18" className="w-24 h-4 overflow-visible">
-                  {Array.from({ length: 15 }).map((_, i) => {
-                    const x = i * 6 + 8;
-                    const isCenter = i === 7;
-                    return (
-                      <line
-                        key={i}
-                        x1={x}
-                        y1={isCenter ? 1 : 6}
-                        x2={x}
-                        y2={15}
-                        stroke={isCenter ? '#e11d48' : '#94a3b8'}
-                        strokeWidth={isCenter ? 2 : 1}
-                        opacity={isCenter ? 1 : 0.6}
-                      />
-                    );
-                  })}
-                </svg>
+              {/* Explicit Clear Breakdown: Without Errors vs With Errors */}
+              <div className="relative z-10 space-y-1 text-[9.5px] font-mono pt-1 border-t border-slate-900/10">
+                <div className="flex justify-between items-center px-2 py-0.5 rounded-md bg-emerald-50/90 border border-emerald-200/60 text-emerald-900">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span>Without Errors:</span>
+                  </span>
+                  <strong className="font-bold">{result.correctCharacters} clean</strong>
+                </div>
+
+                <div className="flex justify-between items-center px-2 py-0.5 rounded-md bg-rose-50/90 border border-rose-200/60 text-rose-900">
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span>With Errors:</span>
+                  </span>
+                  <strong className="font-bold">{result.incorrectCharacters + result.extraCharacters} misses</strong>
+                </div>
               </div>
             </div>
 
@@ -490,11 +491,12 @@ export default function ResultsDisplay({
               </div>
             </div>
 
-            {/* SVG Telemetry Chart */}
-            <div className="relative w-full my-auto flex items-center justify-center min-h-0 py-2">
+            {/* SVG Telemetry Chart - Full Width & Clean Aspect Ratio */}
+            <div className="relative w-full my-auto flex items-center justify-center min-h-0 py-1">
               <svg
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                className="w-full h-full max-h-[185px] overflow-visible select-none"
+                preserveAspectRatio="none"
+                className="w-full h-44 sm:h-52 select-none"
                 onMouseLeave={() => setHoveredPoint(null)}
               >
                 <defs>
@@ -524,7 +526,7 @@ export default function ResultsDisplay({
                         x={padding.left - 8}
                         y={y + 3.5}
                         fill="#94a3b8"
-                        fontSize="10"
+                        fontSize="11"
                         fontFamily="monospace"
                         textAnchor="end"
                       >
@@ -544,7 +546,7 @@ export default function ResultsDisplay({
                       x={x}
                       y={padding.top + graphH + 18}
                       fill="#94a3b8"
-                      fontSize="10"
+                      fontSize="11"
                       fontFamily="monospace"
                       textAnchor="middle"
                     >
@@ -561,7 +563,7 @@ export default function ResultsDisplay({
                   d={rawWpmSvgPath}
                   fill="none"
                   stroke="#94a3b8"
-                  strokeWidth="1.2"
+                  strokeWidth="1.4"
                   strokeDasharray="4 4"
                 />
 
@@ -570,7 +572,7 @@ export default function ResultsDisplay({
                   d={wpmSvgPath}
                   fill="none"
                   stroke="#0f172a"
-                  strokeWidth="2.2"
+                  strokeWidth="2.4"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
@@ -583,7 +585,7 @@ export default function ResultsDisplay({
                       key={`err-${i}`}
                       cx={pt.x}
                       cy={pt.y}
-                      r="3"
+                      r="3.5"
                       fill="#e11d48"
                       stroke="#ffffff"
                       strokeWidth="1.5"
@@ -664,13 +666,15 @@ export default function ResultsDisplay({
               </div>
               <span className="text-slate-300">|</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400 text-[10px] uppercase font-semibold">Total Volume</span>
-                <strong className="text-slate-900 font-bold text-xs">{result.correctCharacters + result.incorrectCharacters} chars</strong>
+                <span className="text-slate-400 text-[10px] uppercase font-semibold">Accuracy</span>
+                <strong className="text-slate-900 font-bold text-xs">
+                  {result.accuracy}% ({result.correctCharacters} clean · {result.incorrectCharacters + result.extraCharacters} err)
+                </strong>
               </div>
               <span className="text-slate-300">|</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400 text-[10px] uppercase font-semibold">Flow Balance</span>
-                <strong className="text-emerald-600 font-bold text-xs">50 / 50</strong>
+                <span className="text-slate-400 text-[10px] uppercase font-semibold">Total Volume</span>
+                <strong className="text-slate-900 font-bold text-xs">{result.correctCharacters + result.incorrectCharacters + result.extraCharacters} chars</strong>
               </div>
             </div>
 
