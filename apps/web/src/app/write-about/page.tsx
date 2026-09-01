@@ -1080,14 +1080,27 @@ export default function WriteAboutApp() {
           <div className="col-left">
             <div className="image-wrapper" style={{ position: 'relative', overflow: 'hidden' }}>
               {!isImageLoaded && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(241, 245, 249, 0.95)', borderRadius: '20px', gap: '10px', zIndex: 3 }}>
-                  <div style={{ width: '30px', height: '30px', border: '3px solid #cbd5e1', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, fontFamily: 'monospace' }}>Loading image challenge...</span>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.92)', borderRadius: '20px', gap: '10px', zIndex: 4, backdropFilter: 'blur(8px)' }}>
+                  <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, fontFamily: 'monospace' }}>Loading visual sprint...</span>
                 </div>
               )}
+              {/* Blurred Ambient Backdrop so any aspect ratio looks complete without layout shifts */}
+              <img
+                src={imageUrl || DEFAULT_PLACEHOLDER_IMAGE}
+                alt=""
+                aria-hidden="true"
+                className="image-ambient-bg"
+                style={{
+                  opacity: isImageLoaded ? 0.45 : 0,
+                  transition: 'opacity 0.4s ease'
+                }}
+              />
+              {/* Foreground Crisp Image strictly contained in bounds */}
               <img
                 src={imageUrl || DEFAULT_PLACEHOLDER_IMAGE}
                 alt="Visual Challenge"
+                className="image-primary"
                 onLoad={() => {
                   setIsImageLoaded(true);
                   setIsRunning(true);
