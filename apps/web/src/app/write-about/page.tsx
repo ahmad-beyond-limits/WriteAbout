@@ -33,20 +33,7 @@ const RATE_WEIGHTS: Record<string, number> = {
   low: 1.5
 };
 
-const SAMPLE_IMAGES = [
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1511497584788-87676104235f?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1426604966848-d7adac402bff?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80',
-  'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1000&q=80'
-];
+const DEFAULT_PLACEHOLDER_IMAGE = 'https://picsum.photos/800/800';
 
 function InsightsScreen({
   onPractice,
@@ -428,11 +415,11 @@ function InsightsScreen({
                     {/* Challenge Image Preview */}
                     <div className="history-thumb-wrapper">
                       <img
-                        src={item.image_url || SAMPLE_IMAGES[0]}
+                        src={item.image_url || DEFAULT_PLACEHOLDER_IMAGE}
                         alt={`Practice #${item.id}`}
                         className="history-thumb-img"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = SAMPLE_IMAGES[0];
+                          (e.target as HTMLImageElement).src = DEFAULT_PLACEHOLDER_IMAGE;
                         }}
                       />
                     </div>
@@ -714,10 +701,22 @@ export default function WriteAboutApp() {
     setIsLoadingAuth(false);
   };
 
+  const [usedImageIds, setUsedImageIds] = useState<number[]>([]);
+
   const getRandomImage = useCallback(() => {
-    const nextIdx = Math.floor(Math.random() * SAMPLE_IMAGES.length);
-    setImageUrl(SAMPLE_IMAGES[nextIdx]);
-  }, []);
+    setIsImageLoaded(false);
+    let newId: number;
+    let attempts = 0;
+    do {
+      newId = Math.floor(Math.random() * 1000) + 1;
+      attempts++;
+    } while (usedImageIds.includes(newId) && attempts < 50);
+
+    setUsedImageIds((prev) => [...prev.slice(-300), newId]);
+    const nextUrl = `https://picsum.photos/id/${newId}/800/800`;
+    setImageUrl(nextUrl);
+    return nextUrl;
+  }, [usedImageIds]);
 
   // Timer Effect (Starts ONLY when image is fully loaded)
   useEffect(() => {
@@ -1087,14 +1086,15 @@ export default function WriteAboutApp() {
                 </div>
               )}
               <img
-                src={imageUrl || SAMPLE_IMAGES[0]}
+                src={imageUrl || DEFAULT_PLACEHOLDER_IMAGE}
                 alt="Visual Challenge"
                 onLoad={() => {
                   setIsImageLoaded(true);
                   setIsRunning(true);
                 }}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = SAMPLE_IMAGES[0];
+                  const fallbackId = Math.floor(Math.random() * 1000) + 1;
+                  (e.target as HTMLImageElement).src = `https://picsum.photos/id/${fallbackId}/800/800`;
                   setIsImageLoaded(true);
                   setIsRunning(true);
                 }}
