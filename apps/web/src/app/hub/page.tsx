@@ -116,7 +116,7 @@ const GOLD_5_BARS = ['#fde68a', '#fcd34d', '#fbbf24', '#f59e0b', '#d97706'];
 
 export default function HubPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ id: number; username: string; role?: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; firstName?: string; lastName?: string; role?: string } | null>(null);
   const [typingTests, setTypingTests] = useState<TypingTestItem[]>([]);
   const [practices, setPractices] = useState<PracticeItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -337,7 +337,11 @@ export default function HubPage() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <span className="text-xs text-[#556b5a] font-medium hidden sm:inline">
+              Welcome, <strong className="text-[#1b2b20]">{user?.lastName || user?.username}</strong>
+            </span>
+
             {(user?.role === 'admin' || user?.username?.toLowerCase() === 'muhammad ahmad') && (
               <Link
                 href="/admin"

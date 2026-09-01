@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,6 +28,11 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Please provide both first name and last name.');
+      return;
+    }
+
     if (!username.trim() || !password.trim()) {
       setError('Please fill in all fields.');
       return;
@@ -43,7 +50,12 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          username: username.trim(),
+          password: password.trim()
+        })
       });
 
       const data = await res.json();
@@ -82,7 +94,7 @@ export default function SignupPage() {
       <div className="relative z-10 w-full max-w-md p-8 sm:p-10 rounded-3xl bg-white/90 border border-[#dbe6d9] shadow-[0_10px_30px_-5px_rgba(40,68,44,0.06)] backdrop-blur-xl">
         
         {/* Brand */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-7">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-3 group">
             <div className="w-8 h-8 rounded-xl bg-[#28442c] flex items-center justify-center text-[#e8f2e9] font-bold text-sm shadow-xs transition-transform group-hover:scale-105">
               <svg className="w-4 h-4 text-[#a3d9ad]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -105,7 +117,37 @@ export default function SignupPage() {
           </div>
         )}
 
-        <form onSubmit={handleSignup} className="space-y-4">
+        <form onSubmit={handleSignup} className="space-y-3.5">
+          {/* First & Last Name row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-mono text-[#4a6350] uppercase tracking-wider mb-1.5 font-semibold">
+                First Name
+              </label>
+              <input
+                type="text"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#f7faf6] border border-[#d6e3d4] text-[#1b2b20] placeholder-[#8a9f90] text-sm focus:outline-none focus:border-[#28442c] focus:bg-white transition-all font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono text-[#4a6350] uppercase tracking-wider mb-1.5 font-semibold">
+                Last Name
+              </label>
+              <input
+                type="text"
+                required
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last name"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#f7faf6] border border-[#d6e3d4] text-[#1b2b20] placeholder-[#8a9f90] text-sm focus:outline-none focus:border-[#28442c] focus:bg-white transition-all font-mono"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-mono text-[#4a6350] uppercase tracking-wider mb-1.5 font-semibold">
               Username
@@ -116,7 +158,7 @@ export default function SignupPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Choose username"
-              className="w-full px-4 py-2.5 rounded-xl bg-[#f7faf6] border border-[#d6e3d4] text-[#1b2b20] placeholder-[#8a9f90] text-sm focus:outline-none focus:border-[#28442c] focus:bg-white transition-all font-mono"
+              className="w-full px-4 py-2 rounded-xl bg-[#f7faf6] border border-[#d6e3d4] text-[#1b2b20] placeholder-[#8a9f90] text-sm focus:outline-none focus:border-[#28442c] focus:bg-white transition-all font-mono"
             />
           </div>
 

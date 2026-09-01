@@ -29,10 +29,12 @@ interface TestHistoryItem {
 
 function SwiftTypeDashboard({
   onStartTest,
-  userId
+  userId,
+  userLastName
 }: {
   onStartTest: () => void;
   userId: number;
+  userLastName?: string;
 }) {
   const [history, setHistory] = useState<TestHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +157,11 @@ function SwiftTypeDashboard({
           </div>
 
           <div className="flex items-center gap-3">
+            {userLastName && (
+              <span className="text-xs text-[#556b5a] font-medium hidden sm:inline">
+                Welcome, <strong className="text-[#1b2b20]">{userLastName}</strong>
+              </span>
+            )}
             <button
               onClick={onStartTest}
               className="px-5 py-2 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-[#f2f7f2] text-xs font-bold uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(30,58,36,0.18)] flex items-center gap-2 cursor-pointer"
@@ -458,7 +465,7 @@ function SwiftTypeContent() {
   const router = useRouter();
   const { settings } = useSettings();
   const { user } = useAuth();
-  const [currentUser, setCurrentUser] = useState<{ id: number; username: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: number; username: string; firstName?: string; lastName?: string } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('writeabout_user') || localStorage.getItem('swifttype_user');
@@ -550,6 +557,7 @@ function SwiftTypeContent() {
           setCurrentView('test');
         }}
         userId={activeUserId}
+        userLastName={currentUser?.lastName || currentUser?.username}
       />
     );
   }

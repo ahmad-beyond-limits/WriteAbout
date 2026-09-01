@@ -29,6 +29,8 @@ export async function GET(request: Request) {
         u.id,
         u.username,
         u.email,
+        u.first_name,
+        u.last_name,
         COALESCE(u.role, 'user') AS role,
         u.created_at,
         (u.api_key IS NOT NULL AND u.api_key != '') AS has_api_key,
@@ -56,6 +58,8 @@ export async function GET(request: Request) {
       users: result.rows.map((r) => ({
         id: r.id,
         username: r.username,
+        firstName: r.first_name || '',
+        lastName: r.last_name || '',
         email: r.email || null,
         role: r.role,
         createdAt: r.created_at,
@@ -79,7 +83,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { username, password, email, role } = data;
+    const { username, password, email, role, firstName, lastName } = data;
 
     if (!username || !password || !username.trim() || !password.trim()) {
       return NextResponse.json({ success: false, error: 'Username and password are required.' }, { status: 400 });
@@ -98,8 +102,8 @@ export async function POST(request: Request) {
     const passwordHash = hashPassword(password, salt);
 
     const insertResult = await pool.query(
-      'INSERT INTO users (username, password_hash, salt, email, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, role, created_at',
-      [trimmedUsername, passwordHash, salt, email?.trim() || null, userRole]
+      'INSERT INTO users (username, password_hash, salt, email, role, first_name, last_name) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, username, email, role, first_name, last_name, created_at',
+      [trimmedUsername, passwordHash, salt, email?.trim() || null, userRole, firstName?.trim() || '', lastName?.trim() || '']
     );
 
     const newUser = insertResult.rows[0];
@@ -109,6 +113,8 @@ export async function POST(request: Request) {
       user: {
         id: newUser.id,
         username: newUser.username,
+        firstName: newUser.first_name,
+        lastName: newUser.last_name,
         email: newUser.email,
         role: newUser.role,
         createdAt: newUser.created_at,

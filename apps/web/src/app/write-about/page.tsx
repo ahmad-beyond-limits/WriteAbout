@@ -54,7 +54,8 @@ function InsightsScreen({
   onConfigureKey,
   userId,
   role,
-  username
+  username,
+  lastName
 }: {
   onPractice: () => void;
   onLogout: () => void;
@@ -62,6 +63,7 @@ function InsightsScreen({
   userId: number;
   role?: string;
   username?: string;
+  lastName?: string;
 }) {
   const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState<'week' | 'month'>('week');
@@ -148,6 +150,11 @@ function InsightsScreen({
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+          {(lastName || username) && (
+            <span style={{ fontSize: '13px', color: '#556b5a', fontWeight: 500, marginRight: '4px' }}>
+              Welcome, <strong style={{ color: '#1b2b20' }}>{lastName || username}</strong>
+            </span>
+          )}
           {(role === 'admin' || username?.toLowerCase() === 'muhammad ahmad') && (
             <Link
               href="/admin"
@@ -590,7 +597,7 @@ function InsightsScreen({
 
 export default function WriteAboutApp() {
   const TOTAL_TIME = 60;
-  const [user, setUser] = useState<{ id: number; username: string; role?: string } | null>(null);
+  const [user, setUser] = useState<{ id: number; username: string; firstName?: string; lastName?: string; role?: string } | null>(null);
   const [currentView, setCurrentView] = useState<'apikey' | 'insights' | 'practice'>('apikey');
   const [apiKey, setApiKey] = useState('');
   const [authStatus, setAuthStatus] = useState('');
@@ -928,6 +935,7 @@ export default function WriteAboutApp() {
           userId={user.id}
           role={user.role}
           username={user.username}
+          lastName={user.lastName}
         />
 
         {showMobileNotice && (

@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 interface UserRecord {
   id: number;
   username: string;
+  firstName?: string;
+  lastName?: string;
   email: string | null;
   role: 'admin' | 'user';
   createdAt: string;
@@ -26,7 +28,7 @@ interface AdminStats {
 
 export default function AdminPortalPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<{ id: number; username: string; role: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: number; username: string; firstName?: string; lastName?: string; role: string } | null>(null);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +37,8 @@ export default function AdminPortalPage() {
 
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
+  const [newFirstName, setNewFirstName] = useState('');
+  const [newLastName, setNewLastName] = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'user' | 'admin'>('user');
@@ -108,6 +112,10 @@ export default function AdminPortalPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError('');
+    if (!newFirstName.trim() || !newLastName.trim()) {
+      setAddError('First name and last name are both required.');
+      return;
+    }
     if (!newUsername.trim() || !newPassword.trim()) {
       setAddError('Username and password are required.');
       return;
@@ -123,6 +131,8 @@ export default function AdminPortalPage() {
           'x-admin-username': currentUser?.username || ''
         },
         body: JSON.stringify({
+          firstName: newFirstName.trim(),
+          lastName: newLastName.trim(),
           username: newUsername.trim(),
           password: newPassword.trim(),
           role: newRole
@@ -132,6 +142,8 @@ export default function AdminPortalPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setShowAddModal(false);
+        setNewFirstName('');
+        setNewLastName('');
         setNewUsername('');
         setNewPassword('');
         setNewRole('user');
@@ -275,6 +287,9 @@ export default function AdminPortalPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <span className="text-xs text-[#556b5a] font-medium hidden md:inline">
+              Welcome, Administrator <strong className="text-[#1b2b20]">{currentUser?.lastName || currentUser?.username}</strong>
+            </span>
             <Link
               href="/hub"
               className="px-3.5 py-1.5 rounded-full bg-white border border-[#d8e3d6] hover:bg-[#edf4ed] text-[#2c4731] text-xs font-semibold tracking-wider transition-all shadow-xs flex items-center gap-1.5"
@@ -438,18 +453,18 @@ export default function AdminPortalPage() {
                                 ? 'bg-[#faedd0] text-[#784805] border border-[#e9cf97]'
                                 : 'bg-[#e8f2e9] text-[#2c4731] border border-[#d0e3cf]'
                             }`}>
-                              {u.username.slice(0, 2).toUpperCase()}
+                              {(u.lastName || u.username).slice(0, 2).toUpperCase()}
                             </div>
                             <div>
                               <div className="font-semibold text-[#1b2b20] flex items-center gap-1.5">
-                                <span>{u.username}</span>
+                                <span>{u.lastName ? `${u.lastName}, ${u.firstName || ''}` : u.username}</span>
                                 {isSelf && (
                                   <span className="text-[9.5px] px-1.5 py-0.2 rounded-md bg-[#e8f2e9] text-[#2c4731] font-mono">
                                     You
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[10px] text-[#788f7e] font-mono">ID: #{u.id}</span>
+                              <span className="text-[10px] text-[#788f7e] font-mono">@{u.username} • ID: #{u.id}</span>
                             </div>
                           </div>
                         </td>
@@ -576,6 +591,35 @@ export default function AdminPortalPage() {
             )}
 
             <form onSubmit={handleAddUser} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#4d6353] mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Alex"
+                    value={newFirstName}
+                    onChange={(e) => setNewFirstName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-2xl bg-[#f2f7f1] border border-[#dbe6d9] text-xs text-[#1b2b20] focus:outline-hidden focus:border-[#28442c] focus:bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#4d6353] mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Miller"
+                    value={newLastName}
+                    onChange={(e) => setNewLastName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-2xl bg-[#f2f7f1] border border-[#dbe6d9] text-xs text-[#1b2b20] focus:outline-hidden focus:border-[#28442c] focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-[#4d6353] mb-1">
                   Username

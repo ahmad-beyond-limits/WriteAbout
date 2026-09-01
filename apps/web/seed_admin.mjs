@@ -19,12 +19,18 @@ function hashPassword(password, salt) {
 async function run() {
   try {
     console.log('Connecting to Neon DB...');
-    // 1. Add role & email column to users table
+    // 1. Add role, email, first_name & last_name columns to users table
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user';
     `);
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+    `);
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);
+    `);
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);
     `);
     console.log('Columns added/verified.');
 
@@ -38,15 +44,15 @@ async function run() {
     if (existing.rows.length > 0) {
       console.log('Updating existing admin user:', existing.rows[0]);
       await pool.query(
-        'UPDATE users SET password_hash = $1, salt = $2, role = $3 WHERE id = $4',
-        [passwordHash, salt, 'admin', existing.rows[0].id]
+        'UPDATE users SET password_hash = $1, salt = $2, role = $3, first_name = $4, last_name = $5 WHERE id = $6',
+        [passwordHash, salt, 'admin', 'Muhammad', 'Ahmad', existing.rows[0].id]
       );
       console.log('Admin user updated successfully.');
     } else {
       console.log('Inserting new admin user...');
       const insert = await pool.query(
-        'INSERT INTO users (username, password_hash, salt, role) VALUES ($1, $2, $3, $4) RETURNING id, username, role',
-        [adminUser, passwordHash, salt, 'admin']
+        'INSERT INTO users (username, password_hash, salt, role, first_name, last_name) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, role, first_name, last_name',
+        [adminUser, passwordHash, salt, 'admin', 'Muhammad', 'Ahmad']
       );
       console.log('Admin user created successfully:', insert.rows[0]);
     }

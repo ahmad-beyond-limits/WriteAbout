@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     // Fetch user from DB
     const userResult = await pool.query(
-      'SELECT id, username, password_hash, salt, api_key, role FROM users WHERE LOWER(username) = LOWER($1)',
+      'SELECT id, username, password_hash, salt, api_key, role, first_name, last_name FROM users WHERE LOWER(username) = LOWER($1)',
       [trimmedUsername]
     );
 
@@ -44,6 +44,8 @@ export async function POST(request: Request) {
       user: {
         id: user.id,
         username: user.username,
+        firstName: user.first_name || '',
+        lastName: user.last_name || user.username,
         role: userRole
       },
       apiKey: decryptedKey
