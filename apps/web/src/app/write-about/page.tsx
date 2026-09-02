@@ -702,21 +702,15 @@ export default function WriteAboutApp() {
   };
 
   const [usedImageIds, setUsedImageIds] = useState<number[]>([]);
+  const [practiceSessionKey, setPracticeSessionKey] = useState<number>(1);
 
   const getRandomImage = useCallback(() => {
     setIsImageLoaded(false);
-    let newId: number;
-    let attempts = 0;
-    do {
-      newId = Math.floor(Math.random() * 1000) + 1;
-      attempts++;
-    } while (usedImageIds.includes(newId) && attempts < 50);
-
-    setUsedImageIds((prev) => [...prev.slice(-300), newId]);
-    const nextUrl = `https://picsum.photos/id/${newId}/800/800`;
+    const randomSeed = Math.random().toString(36).substring(2, 10);
+    const nextUrl = `https://picsum.photos/seed/${randomSeed}/800/800`;
     setImageUrl(nextUrl);
     return nextUrl;
-  }, [usedImageIds]);
+  }, []);
 
   // Timer Effect (Starts ONLY when image is fully loaded)
   useEffect(() => {
@@ -735,6 +729,7 @@ export default function WriteAboutApp() {
   const executeStartPractice = (specificImageUrl?: string) => {
     setIsImageLoaded(false);
     setIsRunning(false);
+    setPracticeSessionKey((prev) => prev + 1);
     if (specificImageUrl && specificImageUrl.trim().length > 0) {
       setImageUrl(specificImageUrl);
     } else {
@@ -1080,34 +1075,30 @@ export default function WriteAboutApp() {
           <div className="col-left">
             <div className="image-wrapper" style={{ position: 'relative', overflow: 'hidden' }}>
               {!isImageLoaded && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.92)', borderRadius: '20px', gap: '10px', zIndex: 4, backdropFilter: 'blur(8px)' }}>
-                  <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, fontFamily: 'monospace' }}>Loading visual sprint...</span>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(241, 245, 249, 0.85)', borderRadius: '20px', gap: '10px', zIndex: 4, backdropFilter: 'blur(6px)' }}>
+                  <div style={{ width: '32px', height: '32px', border: '3px solid #cbd5e1', borderTopColor: '#1e3a24', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '12px', color: '#556b5a', fontWeight: 600, fontFamily: 'monospace' }}>Loading visual sprint...</span>
                 </div>
               )}
-              {/* Blurred Ambient Backdrop so any aspect ratio looks complete without layout shifts */}
+              {/* Primary Image */}
               <img
-                src={imageUrl || DEFAULT_PLACEHOLDER_IMAGE}
-                alt=""
-                aria-hidden="true"
-                className="image-ambient-bg"
-                style={{
-                  opacity: isImageLoaded ? 0.45 : 0,
-                  transition: 'opacity 0.4s ease'
-                }}
-              />
-              {/* Foreground Crisp Image strictly contained in bounds */}
-              <img
+                key={`practice-img-${practiceSessionKey}-${imageUrl}`}
                 src={imageUrl || DEFAULT_PLACEHOLDER_IMAGE}
                 alt="Visual Challenge"
                 className="image-primary"
+                ref={(imgEl) => {
+                  if (imgEl && imgEl.complete && imgEl.naturalWidth > 0 && !isImageLoaded) {
+                    setIsImageLoaded(true);
+                    setIsRunning(true);
+                  }
+                }}
                 onLoad={() => {
                   setIsImageLoaded(true);
                   setIsRunning(true);
                 }}
                 onError={(e) => {
-                  const fallbackId = Math.floor(Math.random() * 1000) + 1;
-                  (e.target as HTMLImageElement).src = `https://picsum.photos/id/${fallbackId}/800/800`;
+                  const fallbackSeed = Math.random().toString(36).substring(2, 8);
+                  (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${fallbackSeed}/800/800`;
                   setIsImageLoaded(true);
                   setIsRunning(true);
                 }}
