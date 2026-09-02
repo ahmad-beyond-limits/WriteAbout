@@ -26,6 +26,7 @@ interface TypingAreaProps {
   onRestart: () => void;
   onBackToDashboard?: () => void;
   isLoadingWords: boolean;
+  onSetCustomWords?: (words: string[]) => void;
 }
 
 const TIME_OPTIONS = [15, 30, 60, 120];
@@ -61,6 +62,7 @@ export default function TypingArea({
   onComplete, onRestart,
   onBackToDashboard,
   isLoadingWords,
+  onSetCustomWords,
 }: TypingAreaProps) {
   const { settings, updateSettings } = useSettings();
   const { user } = useAuth();
@@ -73,6 +75,13 @@ export default function TypingArea({
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [capsLock, setCapsLock] = useState(false);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customInputText, setCustomInputText] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('swifttype_custom_text') || '';
+    }
+    return '';
+  });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsRef = useRef<HTMLDivElement>(null);
@@ -225,12 +234,21 @@ export default function TypingArea({
       ok ? soundEngine.playClick(settings.soundVolume) : soundEngine.playError(settings.soundVolume);
     }
 
-    if (e.key === ' ') {
+    if (e.key === ' ' || (e.key === 'Enter' && (mode === 'custom' || mode === 'words') && currentWordIndex + 1 >= (mode === 'custom' ? words.length : wordCountLimit))) {
       e.preventDefault();
       if (!typed.length) return;
       if (mode === 'words' && currentWordIndex + 1 >= wordCountLimit) { finishTest(startTime ? Date.now() - startTime : 1000); return; }
+      if (mode === 'custom' && currentWordIndex + 1 >= words.length) { finishTest(startTime ? Date.now() - startTime : 1000); return; }
+      if (e.key === 'Enter') return; // Enter mid-test (not last word) — do nothing
       if (currentWordIndex + 1 >= words.length) { finishTest(startTime ? Date.now() - startTime : 1000); return; }
-      setTypedWords(p => [...p, '']);
+
+      setTypedWords(p => {
+        const n = [...p];
+        if (currentWordIndex + 1 >= n.length) {
+          n.push('');
+        }
+        return n;
+      });
       setCurrentWordIndex(p => p + 1);
       setCurrentCharIndex(0);
       return;
@@ -238,14 +256,31 @@ export default function TypingArea({
 
     if (e.key === 'Backspace') {
       e.preventDefault();
+      if (e.ctrlKey) {
+        if (typed.length > 0) {
+          // Clear entire current word
+          setTypedWords(p => { const n = [...p]; n[currentWordIndex] = ''; return n; });
+          setCurrentCharIndex(0);
+        } else if (currentWordIndex > 0) {
+          // Step back and clear previous word
+          const prevWord = typedWords[currentWordIndex - 1] || '';
+          setTypedWords(p => p.slice(0, -1));
+          setCurrentWordIndex(p => p - 1);
+          setCurrentCharIndex(prevWord.length);
+        }
+        return;
+      }
+
       if (typed.length > 0) {
         const u = typed.slice(0, -1);
         setTypedWords(p => { const n = [...p]; n[currentWordIndex] = u; return n; });
-        setCurrentCharIndex(typed.length - 1);
-      } else if (currentWordIndex > 0 && e.ctrlKey) {
+        setCurrentCharIndex(u.length);
+      } else if (currentWordIndex > 0) {
+        // Step back to the end of the previous word to fix it
+        const prevWord = typedWords[currentWordIndex - 1] || '';
         setTypedWords(p => p.slice(0, -1));
         setCurrentWordIndex(p => p - 1);
-        setCurrentCharIndex(typedWords[currentWordIndex - 1]?.length || 0);
+        setCurrentCharIndex(prevWord.length);
       }
       return;
     }
@@ -256,25 +291,34 @@ export default function TypingArea({
       setTypedWords(p => { const n = [...p]; n[currentWordIndex] = u; return n; });
       setCurrentCharIndex(u.length);
       if ((mode === 'words' || mode === 'custom') &&
-          currentWordIndex + 1 >= Math.min(words.length, wordCountLimit) &&
+          currentWordIndex + 1 >= (mode === 'custom' ? words.length : Math.min(words.length, wordCountLimit)) &&
           u === word) finishTest(startTime ? Date.now() - startTime : 1000);
     }
   };
 
   return (
     <div
-      className="w-full h-full flex flex-col items-center justify-center cursor-text select-none m-0 p-0"
-      onClick={() => inputRef.current?.focus()}
+      className={`w-full h-full flex flex-col items-center justify-center ${showCustomModal ? 'select-auto' : 'cursor-text select-none'} m-0 p-0`}
+      onClick={() => {
+        if (!showCustomModal) {
+          inputRef.current?.focus();
+        }
+      }}
     >
-      <input ref={inputRef} type="text"
+      <input
+        ref={inputRef}
+        type="text"
         className="absolute opacity-0 pointer-events-none w-0 h-0"
+        disabled={showCustomModal}
+        tabIndex={showCustomModal ? -1 : 0}
         onKeyDown={handleKeyDown}
         onKeyUp={(e) => {
           if (typeof e.getModifierState === 'function') {
             setCapsLock(e.getModifierState('CapsLock'));
           }
         }}
-        autoFocus />
+        autoFocus={!showCustomModal}
+      />
 
       {/* ── Full Screen Frosted Glass Sheet with Square Corners ── */}
       <div className="w-full h-full rounded-none bg-white/[0.14] backdrop-blur-2xl overflow-hidden flex flex-col justify-between m-0 p-0">
@@ -316,7 +360,19 @@ export default function TypingArea({
 
             {/* Mode */}
             {(['time', 'words', 'custom'] as TestMode[]).map(m => (
-              <Cfg key={m} active={mode === m} onClick={() => setMode(m)}>{m}</Cfg>
+              <Cfg
+                key={m}
+                active={mode === m}
+                onClick={() => {
+                  setMode(m);
+                  if (m === 'custom') {
+                    setCustomInputText(words.join(' '));
+                    setShowCustomModal(true);
+                  }
+                }}
+              >
+                {m}
+              </Cfg>
             ))}
             <Div />
 
@@ -324,9 +380,13 @@ export default function TypingArea({
             {mode === 'time' && TIME_OPTIONS.map(t => <Cfg key={t} active={timeLimit === t} onClick={() => setTimeLimit(t)}>{t}</Cfg>)}
             {mode === 'words' && WORD_OPTIONS.map(w => <Cfg key={w} active={wordCountLimit === w} onClick={() => setWordCountLimit(w)}>{w}</Cfg>)}
             {mode === 'custom' && (
-              <input type="number" min="5" max="200" value={wordCountLimit}
-                onChange={e => setWordCountLimit(Math.max(5, parseInt(e.target.value) || 5))}
-                className="w-12 text-center text-xs bg-white text-[#0f172a] rounded px-2 py-0.5 outline-none font-bold" />
+              <button
+                type="button"
+                onClick={() => setShowCustomModal(true)}
+                className="shrink-0 px-3 py-1 rounded text-xs font-semibold tracking-wider uppercase cursor-pointer transition-all text-[#e2e8f0] hover:text-white hover:bg-white/10"
+              >
+                {words.length > 0 ? `edit text (${words.length}w)` : 'add text'}
+              </button>
             )}
             <Div />
 
@@ -450,6 +510,140 @@ export default function TypingArea({
 
         {/* Bottom clean edge spacer */}
         <div className="h-6" />
+
+        {/* ── Custom Text Modal (Light Slate Theme) ── */}
+        {showCustomModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-150 select-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.target === e.currentTarget) {
+                setShowCustomModal(false);
+                setTimeout(() => inputRef.current?.focus(), 50);
+              }
+            }}
+          >
+            <div
+              className="w-full max-w-xl rounded-3xl p-6 sm:p-7 bg-white border border-slate-200 shadow-2xl space-y-4 text-slate-900 select-auto"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 font-['Sora',sans-serif]">
+                      Practice Custom Text
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Paste or type any custom paragraphs, code snippets, or study texts
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomModal(false);
+                    setTimeout(() => inputRef.current?.focus(), 50);
+                  }}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center text-sm cursor-pointer transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Presets */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Presets:</span>
+                {[
+                  { label: 'Pangram', text: 'The quick brown fox jumps over the lazy dog while five boxing wizards jump quickly.' },
+                  { label: 'Philosophy', text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit. The secret of getting ahead is getting started.' },
+                  { label: 'Programming', text: 'function calculateTypingSpeed(words, timeInSeconds) { return Math.round((words.length / timeInSeconds) * 60); }' },
+                  { label: 'Science', text: 'The universe is under no obligation to make sense to you. Everything we call real is made of things that cannot be regarded as real.' },
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCustomInputText(preset.text)}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/60 transition-colors cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Textarea */}
+              <div className="relative">
+                <textarea
+                  value={customInputText}
+                  onChange={(e) => setCustomInputText(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Paste or type your custom text here. Add as much text as you want..."
+                  rows={6}
+                  autoFocus
+                  className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-slate-800 focus:bg-white text-sm text-slate-900 placeholder:text-slate-400 transition-all outline-none resize-y font-sans leading-relaxed select-text shadow-xs"
+                />
+                <div className="flex items-center justify-between mt-1 px-1 text-[11px] text-slate-500">
+                  <span>
+                    Words: <strong className="text-slate-700 font-mono">{customInputText.trim() ? customInputText.trim().split(/\s+/).length : 0}</strong> | Characters: <strong className="text-slate-700 font-mono">{customInputText.length}</strong>
+                  </span>
+                  {customInputText.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomInputText('')}
+                      className="text-rose-600 hover:text-rose-700 font-medium hover:underline cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomModal(false);
+                    setTimeout(() => inputRef.current?.focus(), 50);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!customInputText.trim()}
+                  onClick={() => {
+                    const parsedWords = customInputText.trim().split(/\s+/).filter(w => w.length > 0);
+                    if (parsedWords.length === 0) return;
+                    try { localStorage.setItem('swifttype_custom_text', customInputText); } catch {}
+                    if (onSetCustomWords) onSetCustomWords(parsedWords);
+                    setShowCustomModal(false);
+                    setTypedWords(['']);
+                    setCurrentWordIndex(0);
+                    setCurrentCharIndex(0);
+                    setIsStarted(false);
+                    setIsFinished(false);
+                    setStartTime(null);
+                    setTimeout(() => inputRef.current?.focus(), 50);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Start Practice</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

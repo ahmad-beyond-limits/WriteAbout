@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TypingTestSubmission } from '@writeabout/types';
 import Link from 'next/link';
 
@@ -25,6 +25,16 @@ export default function ResultsDisplay({
     x: number;
     y: number;
   } | null>(null);
+
+  // ENTER repeats the current test (same words); Tab also does the same
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') { e.preventDefault(); onNextTest(); }
+      if (e.key === 'Tab') { e.preventDefault(); onNextTest(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onNextTest]);
 
   // Time-series data points with smoothed harmonic curve
   const timeSeries = useMemo(() => {
@@ -295,16 +305,10 @@ export default function ResultsDisplay({
             History
           </Link>
           <button
-            onClick={onRepeatTest}
-            className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer font-mono"
-          >
-            Repeat (Tab)
-          </button>
-          <button
             onClick={onNextTest}
             className="px-4 py-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold tracking-wider uppercase transition-all shadow-xs cursor-pointer font-mono"
           >
-            Next Test (Enter)
+            Next (Enter)
           </button>
         </div>
       </div>

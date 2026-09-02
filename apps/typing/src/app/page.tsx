@@ -32,9 +32,11 @@ export default function TypingPage() {
   }, [settings]);
 
   const fetchWords = useCallback(async () => {
+    // Custom words are set manually via the modal — never overwrite them with random words
+    if (mode === 'custom') return;
     setIsLoadingWords(true);
     try {
-      const count = mode === 'words' || mode === 'custom' ? wordCountLimit + 10 : 120;
+      const count = mode === 'words' ? wordCountLimit + 10 : 120;
       const res = await fetch(
         `/api/words?count=${count}&punctuation=${punctuation}&numbers=${numbers}&wordSet=${encodeURIComponent(wordSet)}`
       );
@@ -65,7 +67,11 @@ export default function TypingPage() {
     }
   };
 
-  const handleNextTest = () => { setLastResult(null); fetchWords(); };
+  const handleNextTest = () => {
+    setLastResult(null);
+    // In custom mode, keep the same custom words — don't fetch random words
+    if (mode !== 'custom') fetchWords();
+  };
   const handleRepeatTest = () => { setLastResult(null); };
 
   return (

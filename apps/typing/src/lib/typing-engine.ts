@@ -34,59 +34,58 @@ export function calculateTypingMetrics(
   let extraCharacters = 0;
   let missedCharacters = 0;
 
-  for (let i = 0; i < targetWords.length; i++) {
-    const target = targetWords[i];
+  for (let i = 0; i < typedWords.length; i++) {
+    const target = targetWords[i] || '';
     const typed = typedWords[i] || '';
+    const isCompletedWord = i < typedWords.length - 1;
 
-    if (i < typedWords.length - 1) {
-      // Completed word
-      const maxLen = Math.max(target.length, typed.length);
-      for (let j = 0; j < maxLen; j++) {
-        if (j >= target.length) {
-          extraCharacters++;
-        } else if (j >= typed.length) {
-          missedCharacters++;
-        } else if (typed[j] === target[j]) {
-          correctCharacters++;
-        } else {
-          incorrectCharacters++;
-        }
+    for (let j = 0; j < typed.length; j++) {
+      if (j >= target.length) {
+        extraCharacters++;
+      } else if (typed[j] === target[j]) {
+        correctCharacters++;
+      } else {
+        incorrectCharacters++;
       }
-      // Add space for completed words
-      correctCharacters++;
-    } else if (i === typedWords.length - 1) {
-      // Currently active word
-      for (let j = 0; j < typed.length; j++) {
-        if (j >= target.length) {
-          extraCharacters++;
-        } else if (typed[j] === target[j]) {
-          correctCharacters++;
-        } else {
-          incorrectCharacters++;
-        }
+    }
+
+    if (isCompletedWord) {
+      if (typed === target) {
+        // Space counts as +1 correct character ONLY if the word was 100% accurate
+        correctCharacters++;
+      } else {
+        incorrectCharacters++;
+      }
+
+      if (typed.length < target.length) {
+        missedCharacters += (target.length - typed.length);
+      }
+    } else {
+      if (typed.length < target.length) {
+        missedCharacters += (target.length - typed.length);
       }
     }
   }
 
   const totalTypedCharacters = correctCharacters + incorrectCharacters + extraCharacters;
-  const rawWpm = Math.round(((totalTypedCharacters / 5) / elapsedMinutes) * 10) / 10;
+  const rawWpm = Math.max(0, Math.round(((totalTypedCharacters / 5) / elapsedMinutes) * 10) / 10);
   const wpm = Math.max(0, Math.round(((correctCharacters / 5) / elapsedMinutes) * 10) / 10);
   const accuracy = totalTypedCharacters > 0
-    ? Math.round((correctCharacters / totalTypedCharacters) * 1000) / 10
+    ? Math.min(100, Math.max(0, Math.round((correctCharacters / totalTypedCharacters) * 1000) / 10))
     : 0;
 
-  // Consistency estimation
-  const consistency = Math.min(100, Math.max(0, Math.round(accuracy * 0.95 + (wpm > 0 ? 5 : 0))));
+  // Consistency estimation based on accuracy and speed stability
+  const consistency = Math.min(100, Math.max(0, Math.round(accuracy * 0.92 + (wpm > 0 ? 8 : 0))));
 
   return {
     userId,
     wordSetId,
     mode,
     duration: Math.round(elapsedMs / 1000),
-    wordCount: typedWords.length,
+    wordCount: typedWords.filter(w => w.length > 0).length,
     punctuation,
     numbers,
-    targetText: targetWords.join(' '),
+    targetText: targetWords.slice(0, typedWords.length).join(' '),
     typedText: typedWords.join(' '),
     wpm,
     rawWpm,

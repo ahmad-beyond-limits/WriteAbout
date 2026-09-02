@@ -29,15 +29,19 @@ interface TestHistoryItem {
 
 function SwiftTypeDashboard({
   onStartTest,
+  onStartCustomText,
   userId,
   userLastName
 }: {
   onStartTest: () => void;
+  onStartCustomText: (text: string) => void;
   userId: number;
   userLastName?: string;
 }) {
   const [history, setHistory] = useState<TestHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customText, setCustomText] = useState('');
 
   const fetchHistory = useCallback(async () => {
     if (!userId || userId <= 0) {
@@ -167,6 +171,17 @@ function SwiftTypeDashboard({
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
             </Link>
+
+            <button
+              onClick={() => setShowCustomModal(true)}
+              className="px-4 py-2.5 sm:py-2 rounded-2xl bg-white hover:bg-[#edf4ed] border border-[#d8e3d6] hover:border-[#1e3a24] text-[#1e3a24] text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              <span>Custom Text</span>
+            </button>
 
             <button
               onClick={onStartTest}
@@ -481,6 +496,107 @@ function SwiftTypeDashboard({
           duoprep • SwiftType Telemetry
         </footer>
 
+        {/* ── Custom Text Modal ── */}
+        {showCustomModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-md p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-xl rounded-3xl p-6 sm:p-7 bg-white/95 border border-[#dbe6d9] shadow-2xl space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#e1e9df]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#edf4ed] text-[#1e3a24] flex items-center justify-center">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[#0f172a] font-['Sora',sans-serif]">
+                      Practice Custom Text
+                    </h3>
+                    <p className="text-xs text-[#556b5a]">
+                      Paste or write custom paragraphs, code snippets, or study texts
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCustomModal(false)}
+                  className="w-8 h-8 rounded-full hover:bg-black/5 text-[#556b5a] flex items-center justify-center text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Sample Quick Presets */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#556b5a] mr-1">Presets:</span>
+                {[
+                  { label: 'Pangram', text: 'The quick brown fox jumps over the lazy dog while five boxing wizards jump quickly.' },
+                  { label: 'Philosophy', text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.' },
+                  { label: 'Programming', text: 'function calculateTypingSpeed(words, timeInSeconds) { return Math.round((words.length / timeInSeconds) * 60); }' }
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCustomText(preset.text)}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#f0f4ee] hover:bg-[#e1ede1] text-[#2c4731] transition-colors cursor-pointer"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Textarea */}
+              <div className="relative">
+                <textarea
+                  value={customText}
+                  onChange={(e) => setCustomText(e.target.value)}
+                  placeholder="Paste or type your custom text here..."
+                  rows={5}
+                  className="w-full p-4 rounded-2xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm text-[#1b2b20] transition-all outline-none resize-none font-sans leading-relaxed"
+                  autoFocus
+                />
+                <div className="flex items-center justify-between mt-1 px-1 text-[11px] text-[#718b76]">
+                  <span>
+                    Words: <strong>{customText.trim() ? customText.trim().split(/\s+/).length : 0}</strong> | Characters: <strong>{customText.length}</strong>
+                  </span>
+                  {customText.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomText('')}
+                      className="text-rose-600 hover:underline cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#556b5a] hover:bg-black/5 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!customText.trim()}
+                  onClick={() => {
+                    setShowCustomModal(false);
+                    onStartCustomText(customText);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-[#1e3a24] hover:bg-[#162d1c] disabled:opacity-40 text-white text-xs font-bold uppercase tracking-wider transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Start Practice</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
@@ -527,9 +643,11 @@ function SwiftTypeContent() {
   }, [settings]);
 
   const fetchWords = useCallback(async () => {
+    // Custom words are set manually via the modal — never overwrite them with random words
+    if (mode === 'custom') return;
     setIsLoadingWords(true);
     try {
-      const count = mode === 'words' || mode === 'custom' ? wordCountLimit + 10 : 120;
+      const count = mode === 'words' ? wordCountLimit + 10 : 120;
       const res = await fetch(
         `/api/words?count=${count}&punctuation=${punctuation}&numbers=${numbers}&wordSet=${encodeURIComponent(wordSet)}`
       );
@@ -569,10 +687,14 @@ function SwiftTypeContent() {
 
   const handleNextTest = () => {
     setLastResult(null);
-    fetchWords();
+    // In custom mode, keep the same custom words — don't fetch random words
+    if (mode !== 'custom') {
+      fetchWords();
+    }
   };
   const handleRepeatTest = () => {
     setLastResult(null);
+    // Never fetch new words on repeat — always replay same set
   };
 
   const [showMobileNotice, setShowMobileNotice] = useState(false);
@@ -591,11 +713,30 @@ function SwiftTypeContent() {
     }
   };
 
+  const handleStartCustomText = (text: string) => {
+    const customWords = text.trim().split(/\s+/).filter(w => w.length > 0);
+    if (customWords.length === 0) return;
+    setWords(customWords);
+    setMode('custom');
+    setWordCountLimit(customWords.length);
+    setIsLoadingWords(false);
+    setLastResult(null);
+    setCurrentView('test');
+  };
+
+  const handleSetCustomWords = (customWords: string[]) => {
+    setWords(customWords);
+    setMode('custom');
+    setWordCountLimit(customWords.length);
+    setIsLoadingWords(false);
+  };
+
   if (currentView === 'dashboard') {
     return (
       <>
         <SwiftTypeDashboard
           onStartTest={handleStartTest}
+          onStartCustomText={handleStartCustomText}
           userId={currentUser?.id || 0}
           userLastName={currentUser?.lastName || currentUser?.username}
         />
@@ -684,6 +825,7 @@ function SwiftTypeContent() {
           onRestart={handleNextTest}
           onBackToDashboard={() => setCurrentView('dashboard')}
           isLoadingWords={isLoadingWords}
+          onSetCustomWords={handleSetCustomWords}
         />
       )}
     </div>
