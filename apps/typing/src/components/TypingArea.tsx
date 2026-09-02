@@ -107,7 +107,7 @@ export default function TypingArea({
   }, []);
 
   // Reset on word/config change
-  useEffect(() => {
+  const resetTest = useCallback(() => {
     setTypedWords(['']);
     setCurrentWordIndex(0);
     setCurrentCharIndex(0);
@@ -118,7 +118,11 @@ export default function TypingArea({
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (wordsRef.current) { wordsRef.current.scrollTop = 0; }
     inputRef.current?.focus();
-  }, [words, timeLimit, mode, wordCountLimit]);
+  }, [timeLimit]);
+
+  useEffect(() => {
+    resetTest();
+  }, [words, timeLimit, mode, wordCountLimit, resetTest]);
 
   // Smooth line-based scroll: runs ONLY when moving to a new word, NEVER on individual keypresses
   useEffect(() => {
@@ -231,24 +235,41 @@ export default function TypingArea({
       setCapsLock(e.getModifierState('CapsLock'));
     }
     if (isFinished || isLoadingWords || !words.length) return;
-    if (e.key === 'Tab') { e.preventDefault(); onRestart(); return; }
-    if (e.key === 'Escape') { e.preventDefault(); inputRef.current?.focus(); return; }
-    if (!isStarted) { setIsStarted(true); setStartTime(Date.now()); }
 
     const word = words[currentWordIndex] || '';
     const typed = typedWords[currentWordIndex] || '';
+
+    if (e.key === 'Tab' || e.key === 'Escape') {
+      e.preventDefault();
+      resetTest();
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const isLastWord = (mode === 'words' || mode === 'custom') && currentWordIndex + 1 >= (mode === 'custom' ? words.length : wordCountLimit);
+      const isCompleted = isLastWord && typed.length >= word.length;
+      if (isCompleted) {
+        finishTest(startTime ? Date.now() - startTime : 1000);
+        return;
+      }
+      // Hitting Enter during practice refreshes/restarts the practice with the same text
+      resetTest();
+      return;
+    }
+
+    if (!isStarted) { setIsStarted(true); setStartTime(Date.now()); }
 
     if (settings.soundEnabled && e.key.length === 1 && e.key !== ' ') {
       const ok = typed.length < word.length && e.key === word[typed.length];
       ok ? soundEngine.playClick(settings.soundVolume) : soundEngine.playError(settings.soundVolume);
     }
 
-    if (e.key === ' ' || (e.key === 'Enter' && (mode === 'custom' || mode === 'words') && currentWordIndex + 1 >= (mode === 'custom' ? words.length : wordCountLimit))) {
+    if (e.key === ' ') {
       e.preventDefault();
       if (!typed.length) return;
       if (mode === 'words' && currentWordIndex + 1 >= wordCountLimit) { finishTest(startTime ? Date.now() - startTime : 1000); return; }
       if (mode === 'custom' && currentWordIndex + 1 >= words.length) { finishTest(startTime ? Date.now() - startTime : 1000); return; }
-      if (e.key === 'Enter') return; // Enter mid-test (not last word) — do nothing
       if (currentWordIndex + 1 >= words.length) { finishTest(startTime ? Date.now() - startTime : 1000); return; }
 
       setTypedWords(p => {
@@ -356,6 +377,7 @@ export default function TypingArea({
             <Div />
 
             {/* Mode */}
+            {/* Mode */}
             {(['time', 'words', 'custom'] as TestMode[]).map(m => (
               <Cfg
                 key={m}
@@ -363,8 +385,19 @@ export default function TypingArea({
                 onClick={() => {
                   setMode(m);
                   if (m === 'custom') {
-                    setCustomInputText(words.join(' '));
-                    setShowCustomModal(true);
+                    if (typeof window !== 'undefined') {
+                      const saved = localStorage.getItem('swifttype_custom_text') || '';
+                      if (saved.trim()) {
+                        const parsed = saved.trim().split(/\s+/).filter(w => w.length > 0);
+                        if (parsed.length > 0 && onSetCustomWords) {
+                          onSetCustomWords(parsed);
+                        }
+                      } else {
+                        setShowCustomModal(true);
+                      }
+                    } else {
+                      setShowCustomModal(true);
+                    }
                   }
                 }}
               >
@@ -379,7 +412,11 @@ export default function TypingArea({
             {mode === 'custom' && (
               <button
                 type="button"
-                onClick={() => setShowCustomModal(true)}
+                onClick={() => {
+                  const saved = typeof window !== 'undefined' ? localStorage.getItem('swifttype_custom_text') || '' : '';
+                  setCustomInputText(saved || words.join(' '));
+                  setShowCustomModal(true);
+                }}
                 className="shrink-0 px-3 py-1 rounded text-xs font-semibold tracking-wider uppercase cursor-pointer transition-all text-[#e2e8f0] hover:text-white hover:bg-white/10"
               >
                 {words.length > 0 ? `edit text (${words.length}w)` : 'add text'}
@@ -405,6 +442,22 @@ export default function TypingArea({
               <option value="fast" className="bg-[#0f172a] text-white">smooth: fast</option>
               <option value="off" className="bg-[#0f172a] text-white">smooth: off</option>
             </select>
+            <Div />
+
+            {/* Restart Button with Enter Indicator */}
+            <button
+              type="button"
+              onClick={resetTest}
+              className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold text-[#cbd5e1] hover:text-white hover:bg-white/10 transition-all cursor-pointer group"
+              title="Restart practice with same text (or press Enter / Tab)"
+            >
+              <svg className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 group-hover:rotate-180 transition-all duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              <span>restart</span>
+              <span className="text-[10px] px-1 py-0.2 rounded bg-white/10 text-[#94a3b8] font-mono font-normal">↵</span>
+            </button>
           </div>
 
           {/* Solid 100% Bright Timer (Never Fades) */}

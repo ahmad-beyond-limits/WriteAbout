@@ -633,14 +633,34 @@ function SwiftTypeContent() {
   const [isLoadingWords, setIsLoadingWords] = useState(true);
   const [lastResult, setLastResult] = useState<TypingTestSubmission | null>(null);
 
+  const loadCustomWords = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('swifttype_custom_text') || '';
+      if (saved.trim()) {
+        const parsed = saved.trim().split(/\s+/).filter(w => w.length > 0);
+        if (parsed.length > 0) {
+          setWords(parsed);
+          setWordCountLimit(parsed.length);
+          setIsLoadingWords(false);
+          return true;
+        }
+      }
+    }
+    return false;
+  }, []);
+
   useEffect(() => {
     if (settings) {
-      setMode(settings.defaultTestMode || 'time');
+      const defaultMode = settings.defaultTestMode || 'time';
+      setMode(defaultMode);
       setTimeLimit(settings.defaultTestDuration || 30);
       setPunctuation(settings.punctuation || false);
       setNumbers(settings.numbers || false);
+      if (defaultMode === 'custom') {
+        loadCustomWords();
+      }
     }
-  }, [settings]);
+  }, [settings, loadCustomWords]);
 
   const fetchWords = useCallback(async () => {
     // Custom words are set manually via the modal — never overwrite them with random words
@@ -701,7 +721,11 @@ function SwiftTypeContent() {
 
   const executeStartTest = () => {
     setLastResult(null);
-    fetchWords();
+    if (mode === 'custom') {
+      loadCustomWords();
+    } else {
+      fetchWords();
+    }
     setCurrentView('test');
   };
 
@@ -716,6 +740,7 @@ function SwiftTypeContent() {
   const handleStartCustomText = (text: string) => {
     const customWords = text.trim().split(/\s+/).filter(w => w.length > 0);
     if (customWords.length === 0) return;
+    try { localStorage.setItem('swifttype_custom_text', text); } catch {}
     setWords(customWords);
     setMode('custom');
     setWordCountLimit(customWords.length);
@@ -725,6 +750,7 @@ function SwiftTypeContent() {
   };
 
   const handleSetCustomWords = (customWords: string[]) => {
+    try { localStorage.setItem('swifttype_custom_text', customWords.join(' ')); } catch {}
     setWords(customWords);
     setMode('custom');
     setWordCountLimit(customWords.length);
