@@ -92,6 +92,8 @@ export interface UserStatistics {
   updatedAt: Date;
 }
 
+export type CaretSmoothness = 'off' | 'fast' | 'medium' | 'slow';
+
 export interface UserSettings {
   id: number;
   userId: number;
@@ -99,7 +101,7 @@ export interface UserSettings {
   font: string;
   fontSize: number;
   caretStyle: CaretStyle;
-  smoothCaret: boolean;
+  smoothCaret: CaretSmoothness | boolean | string;
   soundEnabled: boolean;
   soundVolume: number;
   punctuation: boolean;

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
           font: 'Inter',
           fontSize: 18,
           caretStyle: 'line',
-          smoothCaret: true,
+          smoothCaret: 'slow',
           soundEnabled: false,
           soundVolume: 0.5,
           punctuation: false,
@@ -57,23 +57,29 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+    const normalizedData = {
+      ...data,
+      smoothCaret: typeof data.smoothCaret === 'boolean'
+        ? (data.smoothCaret ? 'slow' : 'off')
+        : (data.smoothCaret || 'slow')
+    };
 
     const existing = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
 
     if (existing.length === 0) {
       await db.insert(userSettings).values({
         userId,
-        ...data,
+        ...normalizedData,
         updatedAt: new Date()
       });
     } else {
       await db.update(userSettings).set({
-        ...data,
+        ...normalizedData,
         updatedAt: new Date()
       }).where(eq(userSettings.userId, userId));
     }
 
-    return NextResponse.json({ success: true, settings: data });
+    return NextResponse.json({ success: true, settings: normalizedData });
 
   } catch (error) {
     console.error('Error updating settings:', error);

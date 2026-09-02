@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSettings } from '@/lib/SettingsContext';
 
 interface UserData {
   id: number;
@@ -14,6 +15,7 @@ interface UserData {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { settings, updateSettings } = useSettings();
   const [user, setUser] = useState<UserData | null>(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -587,7 +589,106 @@ export default function SettingsPage() {
             </form>
           </section>
 
-          {/* Card 3: Danger Zone */}
+          {/* Card 3: Caret Smoothing & Typing Physics */}
+          <section className="bg-white/90 border border-[#e1e9df] rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(27,43,32,0.04)] backdrop-blur-xl">
+            <div className="flex items-center gap-3 pb-4 border-b border-[#f0f4ee] mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-[#e8f2e9] text-[#1e3a24] flex items-center justify-center">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[#1b2b20] font-['Sora',sans-serif]">
+                  Typing Physics & Caret Smoothing
+                </h2>
+                <p className="text-xs text-[#556b5a]">
+                  Customize hardware-accelerated cursor glide and sliding animation physics
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-[#354d3b] mb-2 uppercase tracking-wider">
+                  Caret Glide Speed
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {[
+                    {
+                      id: 'slow',
+                      title: 'Slow (Cinematic)',
+                      badge: 'Default',
+                      desc: 'Pronounced, buttery slide effect inspired by MonkeyType.',
+                      speed: '0.15s'
+                    },
+                    {
+                      id: 'medium',
+                      title: 'Medium (Balanced)',
+                      badge: 'Smooth',
+                      desc: 'Balanced fluid glide ideal for high-speed typing.',
+                      speed: '0.09s'
+                    },
+                    {
+                      id: 'fast',
+                      title: 'Fast (Snappy)',
+                      badge: 'Quick',
+                      desc: 'Snappy response with subtle glide physics.',
+                      speed: '0.05s'
+                    },
+                    {
+                      id: 'off',
+                      title: 'Off (Instant)',
+                      badge: 'Raw',
+                      desc: 'Zero animation. Caret snaps instantly between chars.',
+                      speed: '0.00s'
+                    }
+                  ].map((option) => {
+                    const currentSmoothness = typeof settings?.smoothCaret === 'string' 
+                      ? settings.smoothCaret 
+                      : (settings?.smoothCaret ? 'slow' : 'off');
+                    const isSelected = currentSmoothness === option.id;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => updateSettings({ smoothCaret: option.id as any })}
+                        className={`p-4 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-[#eef5ee] border-[#244b2a] shadow-sm ring-2 ring-[#244b2a]/15'
+                            : 'bg-[#f8faf7] border-[#d8e3d6] hover:border-[#b8ccb6] hover:bg-[#f0f4ee]'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-bold text-[#1b2b20] font-['Sora',sans-serif]">
+                              {option.title}
+                            </span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                              isSelected
+                                ? 'bg-[#1e3a24] text-white'
+                                : 'bg-black/5 text-[#556b5a]'
+                            }`}>
+                              {option.badge}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#556b5a] leading-relaxed">
+                            {option.desc}
+                          </p>
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-[#d8e3d6]/60 flex items-center justify-between text-[10px] font-mono text-[#718b76]">
+                          <span>Transition</span>
+                          <span className="font-bold text-[#1b2b20]">{option.speed}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Card 4: Danger Zone */}
           <section className="bg-white/90 border border-rose-200/80 rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(225,29,72,0.04)] backdrop-blur-xl">
             <div className="flex items-center gap-3 pb-4 border-b border-rose-100 mb-6">
               <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center">

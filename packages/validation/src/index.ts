@@ -43,7 +43,7 @@ export const userSettingsSchema = z.object({
   font: z.string().default('Inter'),
   fontSize: z.number().int().min(12).max(32).default(18),
   caretStyle: z.enum(['line', 'block', 'underline', 'off']).default('line'),
-  smoothCaret: z.boolean().default(true),
+  smoothCaret: z.union([z.boolean(), z.enum(['off', 'fast', 'medium', 'slow'])]).default('slow'),
   soundEnabled: z.boolean().default(false),
   soundVolume: z.number().min(0).max(1).default(0.5),
   punctuation: z.boolean().default(false),

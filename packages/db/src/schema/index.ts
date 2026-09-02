@@ -91,7 +91,7 @@ export const userSettings = pgTable('user_settings', {
   font: varchar('font', { length: 100 }).notNull().default('Inter'),
   fontSize: integer('font_size').notNull().default(18),
   caretStyle: varchar('caret_style', { length: 50 }).notNull().default('line'),
-  smoothCaret: boolean('smooth_caret').notNull().default(true),
+  smoothCaret: varchar('smooth_caret', { length: 50 }).notNull().default('slow'),
   soundEnabled: boolean('sound_enabled').notNull().default(false),
   soundVolume: real('sound_volume').notNull().default(0.5),
   punctuation: boolean('punctuation').notNull().default(false),

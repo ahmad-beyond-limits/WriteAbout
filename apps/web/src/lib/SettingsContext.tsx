@@ -17,7 +17,7 @@ const defaultSettings: UserSettings = {
   font: 'Inter',
   fontSize: 18,
   caretStyle: 'line',
-  smoothCaret: true,
+  smoothCaret: 'slow',
   soundEnabled: false,
   soundVolume: 0.5,
   punctuation: false,

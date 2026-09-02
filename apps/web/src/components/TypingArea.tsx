@@ -36,6 +36,20 @@ const FONT_SIZE = 48;
 const LINE_HEIGHT = 1.5;
 const STAGE_HEIGHT = 144; // Exact 2-line standard viewport (72px * 2)
 
+const getCaretTransition = (smoothness: string | boolean | undefined) => {
+  if (smoothness === 'off' || smoothness === false) {
+    return 'none';
+  }
+  if (smoothness === 'fast') {
+    return 'transform 0.05s cubic-bezier(0.2, 0.9, 0.3, 1)';
+  }
+  if (smoothness === 'medium') {
+    return 'transform 0.09s cubic-bezier(0.25, 1, 0.5, 1)';
+  }
+  // Default: 'slow' (Pronounced Cinematic Slide Effect)
+  return 'transform 0.15s cubic-bezier(0.12, 0.98, 0.24, 1)';
+};
+
 export default function TypingArea({
   words, wordSetId,
   mode, setMode,
@@ -48,7 +62,7 @@ export default function TypingArea({
   onBackToDashboard,
   isLoadingWords,
 }: TypingAreaProps) {
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const { user } = useAuth();
 
   const [typedWords, setTypedWords] = useState<string[]>(['']);
@@ -266,14 +280,14 @@ export default function TypingArea({
       <div className="w-full h-full rounded-none bg-white/[0.14] backdrop-blur-2xl overflow-hidden flex flex-col justify-between m-0 p-0">
 
         {/* ── Top Bar: Back Button + Controls + 100% Bright Timer ── */}
-        <div className="flex items-center justify-between px-3.5 sm:px-16 py-3 sm:py-4 border-b border-white/[0.1]">
+        <div className="flex items-center justify-between px-3.5 sm:px-12 py-3 sm:py-3.5 border-b border-white/[0.1] overflow-hidden">
 
           {/* Left Controls with Minimal Dashboard & Hub Buttons */}
-          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 overflow-hidden no-scrollbar shrink">
             {onBackToDashboard ? (
               <button
                 onClick={onBackToDashboard}
-                className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold text-[#cbd5e1] hover:text-white hover:bg-white/10 transition-all mr-1 cursor-pointer"
+                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-[#cbd5e1] hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                 title="Return to Dashboard"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,7 +298,7 @@ export default function TypingArea({
             ) : (
               <Link
                 href="/hub"
-                className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold text-[#cbd5e1] hover:text-white hover:bg-white/10 transition-all mr-1 cursor-pointer"
+                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-[#cbd5e1] hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                 title="Return to Hub"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -318,13 +332,26 @@ export default function TypingArea({
 
             {/* Word Set */}
             <select value={wordSet} onChange={e => setWordSet(e.target.value)}
-              className="bg-transparent text-[#cbd5e1] hover:text-white text-xs cursor-pointer outline-none transition-colors font-medium">
+              className="bg-transparent text-[#cbd5e1] hover:text-white text-xs cursor-pointer outline-none transition-colors font-medium shrink-0">
               {WORD_SETS.map(s => <option key={s} value={s} className="bg-[#0f172a] text-white">{s}</option>)}
+            </select>
+            <Div />
+
+            {/* Caret Smoothness Dropdown (Clean matching style) */}
+            <select
+              value={typeof settings?.smoothCaret === 'string' ? settings.smoothCaret : (settings?.smoothCaret ? 'slow' : 'off')}
+              onChange={e => updateSettings({ smoothCaret: e.target.value as any })}
+              className="bg-transparent text-[#cbd5e1] hover:text-white text-xs cursor-pointer outline-none transition-colors font-medium shrink-0"
+            >
+              <option value="slow" className="bg-[#0f172a] text-white">smooth: slow</option>
+              <option value="medium" className="bg-[#0f172a] text-white">smooth: medium</option>
+              <option value="fast" className="bg-[#0f172a] text-white">smooth: fast</option>
+              <option value="off" className="bg-[#0f172a] text-white">smooth: off</option>
             </select>
           </div>
 
           {/* Solid 100% Bright Timer (Never Fades) */}
-          <div className="flex items-baseline gap-1.5 sm:gap-2 shrink-0 pl-3 sm:pl-6">
+          <div className="flex items-baseline gap-1 sm:gap-1.5 shrink-0 pl-3 sm:pl-6">
             <span className="text-3xl sm:text-5xl font-light tabular-nums text-white drop-shadow-xs">
               {mode === 'time' ? timeLeft : currentWordIndex + 1}
             </span>
@@ -379,7 +406,7 @@ export default function TypingArea({
                 boxShadow: 'none',
                 borderRadius: '50px',
                 willChange: 'transform',
-                transition: settings.smoothCaret ? 'transform 0.08s cubic-bezier(0.25, 1, 0.5, 1)' : 'none',
+                transition: getCaretTransition(settings?.smoothCaret ?? 'slow'),
               }}
             />
 

@@ -41,14 +41,14 @@ export async function POST(request: NextRequest) {
       font: 'Inter',
       fontSize: 18,
       caretStyle: 'line',
-      smoothCaret: true,
+      smoothCaret: 'slow',
       soundEnabled: false,
       soundVolume: 0.5,
       punctuation: false,
       numbers: false,
       language: 'english',
       defaultTestMode: 'time',
-      defaultTestDuration: 60
+      defaultTestDuration: 30
     });
 
     await db.insert(userStatistics).values({
