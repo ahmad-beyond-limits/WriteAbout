@@ -79,6 +79,7 @@ export default function SignupPage() {
       }
 
       localStorage.setItem('writeabout_user', JSON.stringify(data.user));
+      localStorage.setItem('swifttype_user', JSON.stringify(data.user));
       router.push('/hub');
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration.');

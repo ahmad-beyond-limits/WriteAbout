@@ -155,12 +155,16 @@ export default function HubPage() {
         });
     } catch (e) {
       localStorage.removeItem('writeabout_user');
+      localStorage.removeItem('swifttype_user');
+      localStorage.removeItem('writeabout_apikey');
       router.push('/login');
     }
   }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('writeabout_user');
+    localStorage.removeItem('swifttype_user');
+    localStorage.removeItem('writeabout_apikey');
     router.push('/login');
   };
 
@@ -350,6 +354,17 @@ export default function HubPage() {
               </Link>
             )}
 
+            <Link
+              href="/settings"
+              title="Settings"
+              className="w-9 h-9 rounded-xl bg-white border border-[#d8e3d6] hover:bg-[#f0f4ee] text-[#556b5a] hover:text-[#1b2b20] flex items-center justify-center transition-all cursor-pointer shadow-xs group"
+            >
+              <svg className="w-4 h-4 transition-transform group-hover:rotate-45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </Link>
+
             <button
               onClick={handleLogout}
               title="Sign Out"
@@ -390,7 +405,7 @@ export default function HubPage() {
           style={{
             background: 'linear-gradient(135deg, #fdf8ec 0%, #f8eed6 45%, #f2e3c0 100%)',
             border: '1px solid rgba(217, 160, 30, 0.4)',
-            boxShadow: '0 16px 40px -10px rgba(180, 130, 40, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
+            boxShadow: '0 16px 40px -10px rgba(40, 180, 152, 0.12), inset 0 1px 2px rgba(255, 255, 255, 0.9)'
           }}
         >
           {/* Subtle Ambient Radial Gold Glow */}
@@ -400,10 +415,10 @@ export default function HubPage() {
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-center relative z-10">
-            
+
             {/* Left Column: Big Main Score on Upper Left + Personality */}
             <div className="lg:col-span-5 space-y-2.5 sm:space-y-3 border-b lg:border-b-0 lg:border-r border-[#ebd7ae] pb-4 sm:pb-5 lg:pb-0 lg:pr-6">
-              
+
               {/* Header row with (i) icon */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -671,14 +686,14 @@ export default function HubPage() {
 
             {/* Modal Content */}
             <div className="space-y-4 text-xs text-[#475569] max-h-[68vh] overflow-y-auto pr-1">
-              
+
               {/* Section 1: 5-Level Progression */}
               <div>
                 <h4 className="font-bold text-[#0f172a] text-[11px] uppercase tracking-wider mb-2.5 flex items-center gap-1.5 font-['Sora',sans-serif]">
                   <span>5-Level Skill Scale</span>
                   <span className="text-[10px] font-normal text-[#64748b]">(Level 1 → 5)</span>
                 </h4>
-                
+
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#fefce8] border border-[#fef08a] text-[#854d0e]">
                     <div className="flex items-center gap-2">

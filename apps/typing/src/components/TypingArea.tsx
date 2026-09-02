@@ -165,8 +165,7 @@ export default function TypingArea({
       }
     }
 
-    caretRef.current.style.left = `${Math.round(left)}px`;
-    caretRef.current.style.top = `${Math.round(top)}px`;
+    caretRef.current.style.transform = `translate3d(${Math.round(left)}px, ${Math.round(top)}px, 0)`;
     caretRef.current.style.display = 'block';
   }, [currentWordIndex, currentCharIndex, isFinished]);
 
@@ -363,17 +362,21 @@ export default function TypingArea({
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            {/* Real Dynamic Caret (Zero Blink, Zero Glow, 50px Rounded) */}
+            {/* Real Dynamic Caret (MonkeyType-style GPU translate3d hardware accelerated) */}
             <div
               ref={caretRef}
               className="caret-line"
               style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
                 display: isFinished ? 'none' : 'block',
                 animation: 'none',
                 opacity: 1,
                 boxShadow: 'none',
                 borderRadius: '50px',
-                transition: settings.smoothCaret ? 'left 0.07s cubic-bezier(0.16,1,0.3,1), top 0.07s cubic-bezier(0.16,1,0.3,1)' : 'none',
+                willChange: 'transform',
+                transition: settings.smoothCaret ? 'transform 0.08s cubic-bezier(0.25, 1, 0.5, 1)' : 'none',
               }}
             />
 

@@ -98,7 +98,7 @@ export const userSettings = pgTable('user_settings', {
   numbers: boolean('numbers').notNull().default(false),
   language: varchar('language', { length: 50 }).notNull().default('english'),
   defaultTestMode: varchar('default_test_mode', { length: 50 }).notNull().default('time'),
-  defaultTestDuration: integer('default_test_duration').notNull().default(60),
+  defaultTestDuration: integer('default_test_duration').notNull().default(30),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 

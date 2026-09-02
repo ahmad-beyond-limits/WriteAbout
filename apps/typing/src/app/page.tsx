@@ -12,7 +12,7 @@ export default function TypingPage() {
   const { user } = useAuth();
 
   const [mode, setMode] = useState<TestMode>('time');
-  const [timeLimit, setTimeLimit] = useState(60);
+  const [timeLimit, setTimeLimit] = useState(30);
   const [wordCountLimit, setWordCountLimit] = useState(50);
   const [punctuation, setPunctuation] = useState(false);
   const [numbers, setNumbers] = useState(false);
@@ -25,7 +25,7 @@ export default function TypingPage() {
   useEffect(() => {
     if (settings) {
       setMode(settings.defaultTestMode || 'time');
-      setTimeLimit(settings.defaultTestDuration || 60);
+      setTimeLimit(settings.defaultTestDuration || 30);
       setPunctuation(settings.punctuation || false);
       setNumbers(settings.numbers || false);
     }

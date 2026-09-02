@@ -163,6 +163,18 @@ function InsightsScreen({
               API Key
             </button>
           )}
+          <Link
+            href="/settings"
+            className="btn-modern-outline"
+            style={{ padding: '8px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}
+            title="Account Settings"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            Settings
+          </Link>
           <button className="btn-modern-outline" onClick={onLogout} style={{ padding: '8px 20px', fontSize: '13px' }}>
             Logout
           </button>
@@ -765,6 +777,12 @@ export default function WriteAboutApp() {
     setIsSubmitting(true);
     setIsRunning(false);
 
+    if (!user?.id) {
+      alert('Your session has expired. Please log in again.');
+      window.location.href = '/login';
+      return;
+    }
+
     try {
       const res = await fetch('/api/submit', {
         method: 'POST',
@@ -772,7 +790,7 @@ export default function WriteAboutApp() {
         body: JSON.stringify({
           text,
           image_url: imageUrl,
-          userId: user?.id || 1,
+          userId: user.id,
           apiKey: apiKey || undefined
         })
       });
@@ -806,6 +824,7 @@ export default function WriteAboutApp() {
 
   const handleLogout = () => {
     localStorage.removeItem('writeabout_user');
+    localStorage.removeItem('swifttype_user');
     localStorage.removeItem('writeabout_apikey');
     setUser(null);
     setApiKey('');

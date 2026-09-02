@@ -16,6 +16,9 @@ export interface AuthUser {
   username: string;
   email?: string | null;
   displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: string | null;
 }
 
 export interface AuthResponse {

@@ -24,7 +24,7 @@ const defaultSettings: UserSettings = {
   numbers: false,
   language: 'english',
   defaultTestMode: 'time',
-  defaultTestDuration: 60,
+  defaultTestDuration: 30,
   updatedAt: new Date()
 };
 

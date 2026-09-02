@@ -50,7 +50,7 @@ export const userSettingsSchema = z.object({
   numbers: z.boolean().default(false),
   language: z.string().default('english'),
   defaultTestMode: z.enum(['time', 'words', 'custom']).default('time'),
-  defaultTestDuration: z.number().int().default(60)
+  defaultTestDuration: z.number().int().default(30)
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

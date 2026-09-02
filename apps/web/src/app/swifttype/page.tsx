@@ -156,7 +156,18 @@ function SwiftTypeDashboard({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center justify-end gap-2">
+            <Link
+              href="/settings"
+              title="Settings"
+              className="w-9 h-9 rounded-xl bg-white border border-[#d8e3d6] hover:bg-[#f0f4ee] text-[#556b5a] hover:text-[#1b2b20] flex items-center justify-center transition-all cursor-pointer shadow-xs group"
+            >
+              <svg className="w-4 h-4 transition-transform group-hover:rotate-45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </Link>
+
             <button
               onClick={onStartTest}
               className="w-full sm:w-auto px-5 py-2.5 sm:py-2 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] text-[#f2f7f2] text-xs font-bold uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(30,58,36,0.18)] flex items-center justify-center gap-2 cursor-pointer"
@@ -496,7 +507,7 @@ function SwiftTypeContent() {
 
   const [currentView, setCurrentView] = useState<'dashboard' | 'test'>('dashboard');
   const [mode, setMode] = useState<TestMode>('time');
-  const [timeLimit, setTimeLimit] = useState(60);
+  const [timeLimit, setTimeLimit] = useState(30);
   const [wordCountLimit, setWordCountLimit] = useState(50);
   const [punctuation, setPunctuation] = useState(false);
   const [numbers, setNumbers] = useState(false);
@@ -509,7 +520,7 @@ function SwiftTypeContent() {
   useEffect(() => {
     if (settings) {
       setMode(settings.defaultTestMode || 'time');
-      setTimeLimit(settings.defaultTestDuration || 60);
+      setTimeLimit(settings.defaultTestDuration || 30);
       setPunctuation(settings.punctuation || false);
       setNumbers(settings.numbers || false);
     }
@@ -538,16 +549,18 @@ function SwiftTypeContent() {
     fetchWords();
   }, [fetchWords]);
 
-  const activeUserId = currentUser?.id || user?.id || 0;
-
   const handleComplete = async (submission: TypingTestSubmission) => {
     setLastResult(submission);
-    if (!activeUserId || activeUserId <= 0) return;
+    if (!currentUser?.id) {
+      alert('Your session has expired. Please log in again.');
+      router.push('/login');
+      return;
+    }
     try {
       await fetch('/api/tests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...submission, userId: activeUserId, wordSetId })
+        body: JSON.stringify({ ...submission, userId: currentUser.id, wordSetId })
       });
     } catch (err) {
       console.error('Failed to save result:', err);
@@ -583,7 +596,7 @@ function SwiftTypeContent() {
       <>
         <SwiftTypeDashboard
           onStartTest={handleStartTest}
-          userId={activeUserId}
+          userId={currentUser?.id || 0}
           userLastName={currentUser?.lastName || currentUser?.username}
         />
 

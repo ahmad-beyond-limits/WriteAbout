@@ -6,6 +6,7 @@ import { AuthUser } from '@writeabout/types';
 interface AuthContextType {
   user: AuthUser | null;
   login: (user: AuthUser) => void;
+  updateUser: (partialUser: Partial<AuthUser>) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -13,6 +14,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   login: () => {},
+  updateUser: () => {},
   logout: () => {},
   isLoading: true
 });
@@ -40,6 +42,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('swifttype_user', JSON.stringify(newUser));
   };
 
+  const updateUser = (partialUser: Partial<AuthUser>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...partialUser };
+      localStorage.setItem('writeabout_user', JSON.stringify(updated));
+      localStorage.setItem('swifttype_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('writeabout_user');
@@ -47,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, updateUser, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

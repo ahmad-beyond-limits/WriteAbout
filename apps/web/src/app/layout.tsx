@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/AuthContext";
+import { SettingsProvider } from "@/lib/SettingsContext";
 
 export const metadata: Metadata = {
   title: "duoprep | Write & Type",
@@ -33,7 +35,13 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans bg-[#f6f8f5] text-[#1b2b20]">{children}</body>
+      <body className="min-h-full flex flex-col font-sans bg-[#f6f8f5] text-[#1b2b20]">
+        <AuthProvider>
+          <SettingsProvider>
+            {children}
+          </SettingsProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

@@ -61,6 +61,7 @@ export default function LoginPage() {
       }
 
       localStorage.setItem('writeabout_user', JSON.stringify(data.user));
+      localStorage.setItem('swifttype_user', JSON.stringify(data.user));
       if (data.apiKey) {
         localStorage.setItem('writeabout_apikey', data.apiKey);
       } else {
