@@ -1,7 +1,7 @@
 import { pool } from './index';
 
 export async function migrate() {
-  console.log('Running database migrations on Neon PostgreSQL...');
+  console.log('Running database migrations on Supabase PostgreSQL...');
 
   const queries = [
     // 1. Users
@@ -14,12 +14,19 @@ export async function migrate() {
       display_name VARCHAR(100),
       avatar_url TEXT,
       api_key TEXT,
+      role VARCHAR(50) DEFAULT 'user',
+      first_name VARCHAR(100),
+      last_name VARCHAR(100),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255);`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key TEXT;`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user';`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`,
 
     // 2. Word Sets
@@ -92,7 +99,7 @@ export async function migrate() {
       font VARCHAR(100) NOT NULL DEFAULT 'Inter',
       font_size INTEGER NOT NULL DEFAULT 18,
       caret_style VARCHAR(50) NOT NULL DEFAULT 'line',
-      smooth_caret BOOLEAN NOT NULL DEFAULT true,
+      smooth_caret VARCHAR(50) NOT NULL DEFAULT 'slow',
       sound_enabled BOOLEAN NOT NULL DEFAULT false,
       sound_volume REAL NOT NULL DEFAULT 0.5,
       punctuation BOOLEAN NOT NULL DEFAULT false,
@@ -102,6 +109,9 @@ export async function migrate() {
       default_test_duration INTEGER NOT NULL DEFAULT 60,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`,
+    `ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS smooth_caret VARCHAR(50) DEFAULT 'slow';`,
+    `ALTER TABLE user_settings ALTER COLUMN smooth_caret TYPE VARCHAR(50) USING smooth_caret::text;`,
+    `ALTER TABLE user_settings ALTER COLUMN smooth_caret SET DEFAULT 'slow';`,
 
     // 7. Leaderboard Entries
     `CREATE TABLE IF NOT EXISTS leaderboard_entries (

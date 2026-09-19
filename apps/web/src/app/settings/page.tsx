@@ -34,6 +34,13 @@ export default function SettingsPage() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // API Key & Model state
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('qwen/qwen-2.5-72b-instruct');
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
+  const [apiKeyMessage, setApiKeyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   // Modal states for Danger Zone
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetPasswordInput, setResetPasswordInput] = useState('');
@@ -57,6 +64,11 @@ export default function SettingsPage() {
       setUser(parsed);
       setFirstName(parsed.firstName || '');
       setLastName(parsed.lastName || '');
+
+      const storedKey = localStorage.getItem('writeabout_apikey') || '';
+      const storedModel = localStorage.getItem('writeabout_model') || 'qwen/qwen-2.5-72b-instruct';
+      setApiKey(storedKey);
+      setSelectedModel(storedModel);
     } catch {
       localStorage.removeItem('writeabout_user');
       localStorage.removeItem('swifttype_user');
@@ -70,6 +82,7 @@ export default function SettingsPage() {
     localStorage.removeItem('writeabout_user');
     localStorage.removeItem('swifttype_user');
     localStorage.removeItem('writeabout_apikey');
+    localStorage.removeItem('writeabout_model');
     router.push('/login');
   };
 
@@ -243,6 +256,53 @@ export default function SettingsPage() {
     } finally {
       setIsDeletingAccount(false);
     }
+  };
+
+  // Handle Save API Key & Model Selection
+  const handleSaveApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiKeyMessage(null);
+
+    if (!apiKey.trim()) {
+      setApiKeyMessage({ type: 'error', text: 'Please enter a valid Groq API key (e.g. gsk_...).' });
+      return;
+    }
+
+    setIsSavingApiKey(true);
+    try {
+      const verifyRes = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { Authorization: `Bearer ${apiKey.trim()}` }
+      });
+      if (!verifyRes.ok) {
+        setApiKeyMessage({ type: 'error', text: 'Invalid Groq API key. Please check your key on groq.com.' });
+        setIsSavingApiKey(false);
+        return;
+      }
+
+      const saveRes = await fetch('/api/auth/save-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id, apiKey: apiKey.trim() })
+      });
+      const saveData = await saveRes.json();
+      if (saveRes.ok && saveData.success) {
+        localStorage.setItem('writeabout_apikey', apiKey.trim());
+        localStorage.setItem('writeabout_model', selectedModel);
+        setApiKeyMessage({ type: 'success', text: `Groq API Key verified & saved! Active model: ${selectedModel}` });
+      } else {
+        setApiKeyMessage({ type: 'error', text: saveData.error || 'Failed to save API key to server.' });
+      }
+    } catch {
+      setApiKeyMessage({ type: 'error', text: 'Network error verifying API key. Please check your internet connection.' });
+    } finally {
+      setIsSavingApiKey(false);
+    }
+  };
+
+  const handleClearApiKey = () => {
+    localStorage.removeItem('writeabout_apikey');
+    setApiKey('');
+    setApiKeyMessage({ type: 'success', text: 'API key has been cleared from local workspace.' });
   };
 
   if (!isReady || !user) {
@@ -589,7 +649,182 @@ export default function SettingsPage() {
             </form>
           </section>
 
-          {/* Card 3: Caret Smoothing & Typing Physics */}
+          {/* Card 3: AI Engine & Model Configuration */}
+          <section className="bg-white/90 border border-[#e1e9df] rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(27,43,32,0.04)] backdrop-blur-xl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#f0f4ee] mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#e8f2e9] text-[#1e3a24] flex items-center justify-center">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#1b2b20] font-['Sora',sans-serif]">
+                    AI Evaluation & Groq API Engine
+                  </h2>
+                  <p className="text-xs text-[#556b5a]">
+                    Configure your free Groq API key and select the AI model for WriteAbout evaluation
+                  </p>
+                </div>
+              </div>
+
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] border border-[#cfe2d1]">
+                <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
+                <span>Free & Unlimited</span>
+              </span>
+            </div>
+
+            {apiKeyMessage && (
+              <div
+                className={`mb-5 p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2.5 border ${
+                  apiKeyMessage.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}
+              >
+                {apiKeyMessage.type === 'success' ? (
+                  <svg className="w-4 h-4 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                )}
+                <span>{apiKeyMessage.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveApiKey} className="space-y-4">
+              {/* Model Selection Dropdown */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-[#354d3b] uppercase tracking-wider">
+                    Evaluation AI Model
+                  </label>
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] px-2 py-0.5 rounded-full">
+                    Default: Qwen 2.5 72B
+                  </span>
+                </div>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => {
+                    setSelectedModel(e.target.value);
+                    localStorage.setItem('writeabout_model', e.target.value);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm text-[#1b2b20] transition-all outline-none cursor-pointer"
+                >
+                  <optgroup label="Qwen Models (Recommended)">
+                    <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B Instruct (Default · High Accuracy)</option>
+                    <option value="qwen-2.5-32b">Qwen 2.5 32B (Fast & Concise)</option>
+                    <option value="qwen-2.5-coder-32b">Qwen 2.5 Coder 32B (Structured & Strict)</option>
+                    <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (Versatile)</option>
+                  </optgroup>
+                  <optgroup label="Meta Llama Models">
+                    <option value="llama-3.3-70b-versatile">Meta Llama 3.3 70B Versatile</option>
+                    <option value="llama-3.1-8b-instant">Meta Llama 3.1 8B Instant (Ultra Fast)</option>
+                  </optgroup>
+                  <optgroup label="Other High Performance Models">
+                    <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 Distill Llama 70B (Reasoning)</option>
+                    <option value="gemma2-9b-it">Google Gemma 2 9B</option>
+                    <option value="mixtral-8x7b-32768">Mistral Mixtral 8x7B 32k</option>
+                  </optgroup>
+                </select>
+                <p className="text-[11px] text-[#556b5a] mt-1">
+                  The selected LLM provides instant grammatical feedback and DET score analysis on image descriptions.
+                </p>
+              </div>
+
+              {/* API Key Input */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-[#354d3b] uppercase tracking-wider">
+                    Groq API Key
+                  </label>
+                  <a
+                    href="https://groq.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-[#059669] hover:text-[#047857] inline-flex items-center gap-1 transition-colors"
+                  >
+                    <span>Get Free Key on Groq.com</span>
+                    <span>↗</span>
+                  </a>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="gsk_..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm font-mono text-[#1b2b20] transition-all outline-none pr-11"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#718b76] hover:text-[#1b2b20] p-1 cursor-pointer"
+                  >
+                    {showApiKey ? (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {apiKey.startsWith('gsk_') && (
+                  <div className="flex items-center gap-1 text-[11px] text-[#059669] font-medium mt-1">
+                    <span>✓</span>
+                    <span>Valid Groq API key format</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-2">
+                {apiKey ? (
+                  <button
+                    type="button"
+                    onClick={handleClearApiKey}
+                    className="px-3.5 py-2 rounded-xl bg-white border border-[#d8e3d6] hover:bg-rose-50 hover:border-rose-200 text-rose-700 font-semibold text-xs transition-all cursor-pointer"
+                  >
+                    Clear API Key
+                  </button>
+                ) : <div />}
+
+                <button
+                  type="submit"
+                  disabled={isSavingApiKey}
+                  className="px-5 py-2.5 rounded-xl bg-[#1e3a24] hover:bg-[#2a4e32] active:scale-95 text-white font-semibold text-xs transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingApiKey ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Verifying & Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Verify & Save API Key</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Card 4: Caret Smoothing & Typing Physics */}
           <section className="bg-white/90 border border-[#e1e9df] rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(27,43,32,0.04)] backdrop-blur-xl">
             <div className="flex items-center gap-3 pb-4 border-b border-[#f0f4ee] mb-6">
               <div className="w-10 h-10 rounded-2xl bg-[#e8f2e9] text-[#1e3a24] flex items-center justify-center">

@@ -1,6 +1,6 @@
 # WriteAbout Monorepo
 
-> A production-grade Turborepo monorepo housing the **WriteAbout** image-writing challenge platform and the **SwiftType** minimalist speed typing application, built with Next.js, TypeScript, Tailwind CSS, and Neon PostgreSQL (Drizzle ORM).
+> A production-grade Turborepo monorepo housing the **WriteAbout** image-writing challenge platform and the **SwiftType** minimalist speed typing application, built with Next.js, TypeScript, Tailwind CSS, and Supabase PostgreSQL (Drizzle ORM).
 
 ---
 
@@ -14,7 +14,7 @@ WriteAbout/
 │   └── typing/           # SwiftType: Minimalist speed typing test app (Next.js, port 3001)
 │
 ├── packages/
-│   ├── db/               # Neon PostgreSQL client, Drizzle ORM schemas, migrations & seeders
+│   ├── db/               # Supabase PostgreSQL client, Drizzle ORM schemas, migrations & seeders
 │   ├── auth/             # PBKDF2 password hashing & symmetric AES-256-CBC API key encryption
 │   ├── types/            # Shared domain, auth, and typing engine TypeScript interfaces
 │   ├── validation/       # Zod schemas for request validation & server sanity checks
@@ -35,7 +35,7 @@ WriteAbout/
 ### 1. Prerequisites
 - **Node.js**: v18.17.0+
 - **npm**: v10.0+
-- **Neon PostgreSQL**: Connection string via `POSTGRES_URL` or `DATABASE_URL`
+- **Supabase**: Free cloud database at [supabase.com](https://supabase.com) (Connection URI via `SUPABASE_DB_URL` or `DATABASE_URL`)
 
 ### 2. Installation
 Clone the repository and install all workspace dependencies:
@@ -53,12 +53,16 @@ Copy `.env.example` to `.env` at the root of the workspace:
 cp .env.example .env
 ```
 
-Ensure your `.env` contains your Neon PostgreSQL connection string:
+Ensure your `.env` contains your Supabase project configuration:
 ```ini
-POSTGRES_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
-DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+
+DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+
 GROQ_API_KEY=gsk_...
-GROQ_MODEL_NAME=qwen/qwen3.6-27b
+GROQ_MODEL_NAME=qwen/qwen-2.5-72b-instruct
 ENCRYPTION_KEY=a_very_secure_secret_key_32_bytes_long!!
 ```
 
@@ -98,7 +102,7 @@ npm run dev
   - `words`: 10, 25, 50, 100
   - `custom`: Configurable word counts
   - `punctuation` & `numbers` toggles
-- **Multi-Set Vocabulary**: Word sets stored directly in Neon PostgreSQL (`English Standard`, `English 1k`, `Tech & Code`).
+- **Multi-Set Vocabulary**: Word sets stored directly in Supabase PostgreSQL (`English Standard`, `English 1k`, `Tech & Code`).
 - **Web Audio Sound Synthesizer**: Built-in mechanical keyboard click and error audio synthesis (no external MP3 assets needed).
 - **Themes & Customization**: 5 curated themes (Dark, Light, Nord, Serika, Matrix), custom font selectors (Inter, Roboto Mono, JetBrains Mono, Fira Code), and font size sliders.
 - **Leaderboards & Analytics**: Verified score submissions, paginated test history, and interactive Recharts progression graphs on user profile.

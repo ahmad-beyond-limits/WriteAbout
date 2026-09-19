@@ -11,9 +11,9 @@ async function runTests() {
 
   try {
     // 1. Test Database Connectivity
-    console.log('1. Testing Neon PostgreSQL connectivity...');
+    console.log('1. Testing Supabase PostgreSQL connectivity...');
     const nowResult = await pool.query('SELECT NOW() as current_time;');
-    console.log('   ✅ Neon Connected! Server time:', nowResult.rows[0].current_time);
+    console.log('   ✅ Supabase Connected! Server time:', nowResult.rows[0].current_time);
 
     // 2. Test Word Sets & Vocabulary
     console.log('\n2. Testing Word Sets & Vocabulary seeding...');
@@ -21,7 +21,7 @@ async function runTests() {
     console.log(`   ✅ Found ${setList.length} word sets:`, setList.map(s => s.name).join(', '));
 
     const wordCountRes = await pool.query('SELECT COUNT(*) as count FROM words;');
-    console.log(`   ✅ Found ${wordCountRes.rows[0].count} words seeded in Neon DB.`);
+    console.log(`   ✅ Found ${wordCountRes.rows[0].count} words seeded in Supabase DB.`);
 
     // 3. Test Registration & Authentication
     console.log('\n3. Testing User Registration & Password Hashing...');
@@ -78,7 +78,7 @@ async function runTests() {
     console.log('   ✅ Typing Engine formulas verified!');
 
     // 5. Test Schema Validation & Database Persistence
-    console.log('\n5. Testing Test Result persistence in Neon DB...');
+    console.log('\n5. Testing Test Result persistence in Supabase DB...');
     const subValidation = typingTestSubmissionSchema.safeParse(calculated);
     if (!subValidation.success) throw new Error('Submission validation failed');
 

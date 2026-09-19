@@ -6,7 +6,7 @@ import path from 'path';
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const { text, image, image_url, timeLeft, apiKey, userId } = data;
+    const { text, image, image_url, timeLeft, apiKey, userId, model } = data;
     const resolvedImage = image || image_url || '';
 
     if (!userId) {
@@ -15,8 +15,11 @@ export async function POST(request: Request) {
 
     // Use provided apiKey or fallback to env
     const groqKey = apiKey || process.env.GROQ_API_KEY;
-    if (!groqKey) {
-      return NextResponse.json({ success: false, error: 'No API Key provided' }, { status: 400 });
+    if (!groqKey || !groqKey.trim()) {
+      return NextResponse.json({
+        success: false,
+        error: 'No Groq API Key found. Please add your Groq API key in the API Key settings.'
+      }, { status: 400 });
     }
 
     // Read the system prompt (with multi-path discovery and built-in fallback)
@@ -45,59 +48,107 @@ Assess the candidate's written response and return a JSON object with:
 Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     }
 
-    const modelName = process.env.GROQ_MODEL_NAME || 'qwen/qwen3.6-27b';
+    // Default to Qwen model if not specified
+    const modelName = model || process.env.GROQ_MODEL_NAME || 'qwen/qwen-2.5-72b-instruct';
 
-    // ── 1. Primary Request to Groq using User's API Key (Original Logic) ──
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${groqKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: modelName,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Please evaluate this description of the image:\n\n"${text}"` }
-        ],
-        temperature: 0.2,
-        max_completion_tokens: 2048
-      })
-    });
+    // ── 1. Primary Request to Groq using User's API Key ──
+    let groqRes: Response;
+    try {
+      groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqKey.trim()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Please evaluate this description of the image:\n\n"${text}"` }
+          ],
+          temperature: 0.2,
+          max_completion_tokens: 2048
+        })
+      });
+    } catch (networkErr: any) {
+      console.error('Groq fetch network error:', networkErr);
+      return NextResponse.json({
+        success: false,
+        error: `Network error connecting to Groq AI (${networkErr?.message || 'Connection refused'}). Check your internet connection.`
+      }, { status: 502 });
+    }
 
     if (!groqRes.ok) {
       const errorText = await groqRes.text();
-      console.error('Groq API Error:', errorText);
-      return NextResponse.json({ success: false, error: 'Groq API Error' }, { status: 500 });
+      console.error('Groq API Error Status:', groqRes.status, 'Body:', errorText);
+
+      let parsedErrorMessage = `Groq API Error (${groqRes.status})`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error?.message) {
+          parsedErrorMessage = errorJson.error.message;
+        }
+      } catch {}
+
+      if (groqRes.status === 401) {
+        parsedErrorMessage = 'Invalid Groq API Key. Please verify your API key in Settings or API Key section.';
+      } else if (groqRes.status === 429) {
+        parsedErrorMessage = `Rate limit exceeded for model "${modelName}". Please wait a moment or choose another model.`;
+      } else if (groqRes.status === 404) {
+        parsedErrorMessage = `Model "${modelName}" was not found or is currently unavailable on Groq.`;
+      }
+
+      return NextResponse.json({
+        success: false,
+        error: parsedErrorMessage,
+        details: errorText
+      }, { status: groqRes.status || 500 });
     }
 
     const groqData = await groqRes.json();
-    let rawResponse = groqData.choices[0].message.content;
+    let rawResponse = groqData.choices?.[0]?.message?.content;
+
+    if (!rawResponse || !rawResponse.trim()) {
+      return NextResponse.json({
+        success: false,
+        error: `The AI model (${modelName}) returned an empty response. Please retry.`
+      }, { status: 502 });
+    }
 
     // Parse JSON from LLM
-    let parsedData = { rating: 'low', feedback: 'Failed to parse AI response.' };
+    let parsedData: { rating?: string; feedback?: string } | null = null;
     try {
-      rawResponse = rawResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-      rawResponse = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-      parsedData = JSON.parse(rawResponse);
+      let cleanContent = rawResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      cleanContent = cleanContent.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsedData = JSON.parse(cleanContent);
     } catch (e) {
-      console.error('Failed to parse LLM JSON:', rawResponse);
+      console.warn('Direct JSON parse failed, attempting regex extraction from:', rawResponse);
       const ratingMatch = rawResponse.match(/"rating"\s*:\s*"([^"]+)"/i);
       const feedbackMatch = rawResponse.match(/"feedback"\s*:\s*"([\s\S]*?)(?:"|$)/i);
-      if (ratingMatch) parsedData.rating = ratingMatch[1];
-      if (feedbackMatch) {
-        let fb = feedbackMatch[1].trim().replace(/"\s*}\s*$/, '').replace(/"$/, '').trim();
-        parsedData.feedback = fb || 'Failed to parse AI response.';
+      if (ratingMatch || feedbackMatch) {
+        parsedData = {
+          rating: ratingMatch ? ratingMatch[1] : undefined,
+          feedback: feedbackMatch ? feedbackMatch[1].trim().replace(/"\s*}\s*$/, '').replace(/"$/, '').trim() : undefined
+        };
       }
+    }
+
+    if (!parsedData || (!parsedData.rating && !parsedData.feedback)) {
+      return NextResponse.json({
+        success: false,
+        error: `Failed to extract evaluation rating from model (${modelName}). Response format was unrecognized.`
+      }, { status: 422 });
     }
 
     // Ensure valid rating
     const validRatings = ['low', 'medium', 'good', 'high', 'excellent'];
-    const rate = validRatings.includes(parsedData.rating?.toLowerCase()) ? parsedData.rating.toLowerCase() : 'medium';
-    const feedback = parsedData.feedback || 'No feedback provided.';
+    const rate = parsedData.rating && validRatings.includes(parsedData.rating.toLowerCase())
+      ? parsedData.rating.toLowerCase()
+      : 'medium';
+    const feedback = parsedData.feedback || 'Evaluation completed without specific feedback comments.';
     const wordCount = text.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
 
-    // Insert into Postgres (Original Logic)
+    // Insert into Postgres only when evaluation genuinely succeeded
     try {
       await pool.query(
         'INSERT INTO practices (image_url, text, rate, feedback, user_id) VALUES ($1, $2, $3, $4, $5)',
@@ -151,7 +202,7 @@ Return ONLY valid JSON:
         const secondaryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${envGroqKey}`,
+            'Authorization': `Bearer ${envGroqKey.trim()}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -201,8 +252,11 @@ Return ONLY valid JSON:
       data: responsePayload
     }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Submit API Error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to process submission' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: `Internal server error during evaluation: ${error?.message || 'Unknown error'}`
+    }, { status: 500 });
   }
 }

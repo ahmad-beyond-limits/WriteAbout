@@ -17,7 +17,7 @@ export default function Footer() {
       <div className="flex items-center gap-3">
         <span className="capitalize">{settings.theme} theme</span>
         <span>•</span>
-        <span>Neon PostgreSQL</span>
+        <span>Supabase PostgreSQL</span>
       </div>
     </footer>
   );

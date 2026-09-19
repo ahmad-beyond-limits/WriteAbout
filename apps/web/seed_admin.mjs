@@ -1,11 +1,20 @@
 import { Pool } from 'pg';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+import path from 'path';
 
-const connectionString = 'postgresql://neondb_owner:npg_G4EzBcyub0nX@ep-morning-mud-ateojs9y-pooler.c-9.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require';
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+
+const connectionString =
+  process.env.SUPABASE_DB_URL ||
+  process.env.SUPABASE_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  '';
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false }
+  ssl: connectionString ? { rejectUnauthorized: false } : undefined
 });
 
 function generateSalt() {
@@ -18,7 +27,7 @@ function hashPassword(password, salt) {
 
 async function run() {
   try {
-    console.log('Connecting to Neon DB...');
+    console.log('Connecting to Supabase PostgreSQL database...');
     // 1. Add role, email, first_name & last_name columns to users table
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user';

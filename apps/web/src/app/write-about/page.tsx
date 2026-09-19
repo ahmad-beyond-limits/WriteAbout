@@ -625,11 +625,26 @@ function InsightsScreen({
   );
 }
 
+export const DEFAULT_AI_MODEL = 'qwen/qwen-2.5-72b-instruct';
+
+export const AVAILABLE_AI_MODELS = [
+  { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct (Recommended)', group: 'Qwen' },
+  { id: 'qwen-2.5-32b', name: 'Qwen 2.5 32B', group: 'Qwen' },
+  { id: 'qwen-2.5-coder-32b', name: 'Qwen 2.5 Coder 32B', group: 'Qwen' },
+  { id: 'qwen/qwen3.6-27b', name: 'Qwen 3.6 27B', group: 'Qwen' },
+  { id: 'llama-3.3-70b-versatile', name: 'Meta Llama 3.3 70B Versatile', group: 'Meta' },
+  { id: 'llama-3.1-8b-instant', name: 'Meta Llama 3.1 8B Instant (Ultra Fast)', group: 'Meta' },
+  { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill 70B', group: 'DeepSeek' },
+  { id: 'gemma2-9b-it', name: 'Google Gemma 2 9B', group: 'Google' },
+  { id: 'mixtral-8x7b-32768', name: 'Mistral Mixtral 8x7B', group: 'Mistral' },
+];
+
 export default function WriteAboutApp() {
   const TOTAL_TIME = 60;
   const [user, setUser] = useState<{ id: number; username: string; firstName?: string; lastName?: string; role?: string } | null>(null);
   const [currentView, setCurrentView] = useState<'apikey' | 'insights' | 'practice'>('apikey');
   const [apiKey, setApiKey] = useState('');
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_AI_MODEL);
   const [authStatus, setAuthStatus] = useState('');
   const [isLoadingAuth, setIsLoadingAuth] = useState(false);
   const [imageUrl, setImageUrl] = useState<string>('');
@@ -639,6 +654,7 @@ export default function WriteAboutApp() {
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult>(null);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [showLimitsInfo, setShowLimitsInfo] = useState(false);
   const [showMobileNotice, setShowMobileNotice] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
@@ -660,12 +676,18 @@ export default function WriteAboutApp() {
   useEffect(() => {
     const saved = localStorage.getItem('writeabout_user');
     const savedKey = localStorage.getItem('writeabout_apikey');
+    const savedModel = localStorage.getItem('writeabout_model');
     if (!saved) {
       window.location.href = '/login';
       return;
     }
     try {
       setUser(JSON.parse(saved));
+      if (savedModel && savedModel.trim().length > 0) {
+        setSelectedModel(savedModel.trim());
+      } else {
+        setSelectedModel(DEFAULT_AI_MODEL);
+      }
       if (savedKey && savedKey.trim().length > 0) {
         setApiKey(savedKey.trim());
         setCurrentView('insights');
@@ -703,6 +725,7 @@ export default function WriteAboutApp() {
       const saveData = await saveRes.json();
       if (saveRes.ok && saveData.success) {
         localStorage.setItem('writeabout_apikey', apiKey.trim());
+        localStorage.setItem('writeabout_model', selectedModel || DEFAULT_AI_MODEL);
         setCurrentView('insights');
       } else {
         setAuthStatus(saveData.error || 'Failed to save API key.');
@@ -750,6 +773,7 @@ export default function WriteAboutApp() {
     setTimeLeft(TOTAL_TIME);
     setText('');
     setAnalysis(null);
+    setEvaluationError(null);
     setCurrentView('practice');
   };
 
@@ -776,6 +800,7 @@ export default function WriteAboutApp() {
 
     setIsSubmitting(true);
     setIsRunning(false);
+    setEvaluationError(null);
 
     if (!user?.id) {
       alert('Your session has expired. Please log in again.');
@@ -791,12 +816,13 @@ export default function WriteAboutApp() {
           text,
           image_url: imageUrl,
           userId: user.id,
-          apiKey: apiKey || undefined
+          apiKey: apiKey || undefined,
+          model: selectedModel || DEFAULT_AI_MODEL
         })
       });
       const data = await res.json();
       const resAnalysis = data.data || data.analysis;
-      if (data.success && resAnalysis) {
+      if (res.ok && data.success && resAnalysis) {
         setAnalysis({
           wordCount: resAnalysis.wordCount,
           rate: resAnalysis.rate,
@@ -804,19 +830,15 @@ export default function WriteAboutApp() {
           totalSentences: resAnalysis.totalSentences,
           levels: resAnalysis.levels
         });
+        setEvaluationError(null);
       } else {
-        setAnalysis({
-          wordCount: text.split(' ').filter(Boolean).length,
-          rate: 'good',
-          feedback: 'Session recorded successfully.'
-        });
+        const errorMsg = data.error || 'Evaluation failed. Please verify your Groq API key and selected model.';
+        setEvaluationError(errorMsg);
+        setAnalysis(null);
       }
-    } catch (err) {
-      setAnalysis({
-        wordCount: text.split(' ').filter(Boolean).length,
-        rate: 'good',
-        feedback: 'Practice completed.'
-      });
+    } catch (err: any) {
+      setEvaluationError(err?.message || 'Network error occurred while connecting to evaluation service.');
+      setAnalysis(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -826,6 +848,7 @@ export default function WriteAboutApp() {
     localStorage.removeItem('writeabout_user');
     localStorage.removeItem('swifttype_user');
     localStorage.removeItem('writeabout_apikey');
+    localStorage.removeItem('writeabout_model');
     setUser(null);
     setApiKey('');
     window.location.href = '/login';
@@ -933,6 +956,45 @@ export default function WriteAboutApp() {
                 <div>2. Go to <strong>API Keys</strong> and click <strong>Create API Key</strong>.</div>
                 <div>3. Paste your key (<code className="text-[#0f172a] bg-white px-1 py-0.5 rounded border border-[#e2e8f0]">gsk_...</code>) below.</div>
               </div>
+            </div>
+
+            {/* ── AI Model Selector ── */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-[#334155] block">
+                  AI Evaluation Model
+                </label>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] px-2 py-0.5 rounded-full border border-[#cfe2d1]">
+                  Default: Qwen 2.5 72B
+                </span>
+              </div>
+              <select
+                value={selectedModel}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value);
+                  localStorage.setItem('writeabout_model', e.target.value);
+                }}
+                className="w-full px-4 py-3.5 rounded-2xl bg-[#fafbfc] border border-[#dbe6d9] focus:bg-white focus:border-[#10b981] focus:ring-2 focus:ring-[#10b981]/20 outline-none text-xs font-semibold text-[#0f172a] transition-all cursor-pointer"
+              >
+                <optgroup label="Qwen Models (Recommended)">
+                  <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B Instruct (Default · High Accuracy)</option>
+                  <option value="qwen-2.5-32b">Qwen 2.5 32B (Fast & Concise)</option>
+                  <option value="qwen-2.5-coder-32b">Qwen 2.5 Coder 32B (Structured & Strict)</option>
+                  <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (Versatile)</option>
+                </optgroup>
+                <optgroup label="Meta Llama Models">
+                  <option value="llama-3.3-70b-versatile">Meta Llama 3.3 70B Versatile</option>
+                  <option value="llama-3.1-8b-instant">Meta Llama 3.1 8B Instant (Ultra Fast)</option>
+                </optgroup>
+                <optgroup label="Other High Performance Models">
+                  <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 Distill Llama 70B (Reasoning)</option>
+                  <option value="gemma2-9b-it">Google Gemma 2 9B</option>
+                  <option value="mixtral-8x7b-32768">Mistral Mixtral 8x7B 32k</option>
+                </optgroup>
+              </select>
+              <p className="text-[11px] text-[#64748b] leading-relaxed">
+                Choose which LLM evaluates your response for vocabulary, grammar, and image relevance.
+              </p>
             </div>
 
             {/* ── API Key Input ── */}
@@ -1296,6 +1358,99 @@ export default function WriteAboutApp() {
               onClick={() => executeStartPractice()}
             >
               Next Image →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Evaluation Error Slide-Up Modal Overlay (Shows real error without misleading mock results) */}
+      <div className={`analysis-overlay ${evaluationError !== null ? 'active' : ''}`}>
+        <div className="analysis-card slide-up" style={{ borderColor: '#fca5a5', background: '#ffffff', boxShadow: '0 20px 50px -10px rgba(220, 38, 38, 0.12)' }}>
+          {/* Top Header Row */}
+          <div className="analysis-top-row" style={{ borderBottomColor: '#fee2e2' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="analysis-main-title" style={{ color: '#991b1b', margin: 0, fontSize: '18px' }}>
+                  AI Evaluation Could Not Complete
+                </h2>
+                <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>
+                  API or Model Issue Detected
+                </span>
+              </div>
+            </div>
+
+            <div className="metrics-grid">
+              <div className="metric" style={{ borderColor: '#fecaca', background: '#fff5f5' }}>
+                <div className="metric-val" style={{ color: '#7f1d1d' }}>{text.trim().split(/\s+/).filter(Boolean).length}</div>
+                <div className="metric-lbl">Words Typed</div>
+              </div>
+              <div className="metric" style={{ borderColor: '#fecaca', background: '#fff5f5' }}>
+                <div className="metric-val" style={{ color: '#dc2626', fontSize: '13px', fontWeight: 700 }}>
+                  {selectedModel.split('/').pop() || 'Qwen 2.5'}
+                </div>
+                <div className="metric-lbl">Active Model</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle Diagnostic & Error Details Box */}
+          <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Error Message from Service:
+              </span>
+              <p style={{ margin: 0, fontSize: '13px', color: '#b91c1c', fontFamily: 'monospace', background: '#fee2e2', padding: '10px 12px', borderRadius: '10px', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                {evaluationError}
+              </p>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '14px 16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Troubleshooting Guidance:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#64748b', lineHeight: 1.6 }}>
+                <li>Check your <strong>Groq API Key</strong> in the API key settings or generate a free key on <a href="https://groq.com" target="_blank" rel="noreferrer" style={{ color: '#059669', textDecoration: 'underline' }}>groq.com</a>.</li>
+                <li>If rate limits or quota were reached on <strong>{selectedModel}</strong>, try selecting another model (e.g. <strong>Qwen 2.5 32B</strong> or <strong>Llama 3.1 8B Instant</strong>).</li>
+                <li>Click <strong>Retry Evaluation ↻</strong> below to re-submit your written response without losing your text.</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Action Buttons */}
+          <div className="analysis-actions-right">
+            <button
+              className="btn-modern-outline"
+              onClick={() => {
+                setEvaluationError(null);
+                setCurrentView('insights');
+              }}
+            >
+              Back to Insights
+            </button>
+            <button
+              className="btn-modern-outline"
+              onClick={() => {
+                setEvaluationError(null);
+                setCurrentView('apikey');
+              }}
+              style={{ borderColor: '#059669', color: '#059669', fontWeight: 700 }}
+            >
+              Configure API Key & Model
+            </button>
+            <button
+              className="btn-modern-primary"
+              onClick={() => submitLog()}
+              disabled={isSubmitting}
+              style={{ background: '#1e3a24', color: '#ffffff' }}
+            >
+              {isSubmitting ? 'Retrying...' : 'Retry Evaluation ↻'}
             </button>
           </div>
         </div>

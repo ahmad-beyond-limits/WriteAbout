@@ -56,7 +56,7 @@ const techWords = [
 ];
 
 export async function seed() {
-  console.log('Seeding word sets and words into Neon PostgreSQL via batch inserts...');
+  console.log('Seeding word sets and words into Supabase PostgreSQL via batch inserts...');
 
   try {
     // 1. Seed Word Sets

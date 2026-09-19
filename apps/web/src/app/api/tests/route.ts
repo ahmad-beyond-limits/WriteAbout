@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Validation failed: impossible typing speed detected.' }, { status: 422 });
     }
 
-    // 3. Persist test into Neon PostgreSQL
+    // 3. Persist test into Supabase PostgreSQL
     const insertedTests = await db.insert(tests).values({
       userId: data.userId || null,
       wordSetId: data.wordSetId || null,

@@ -58,7 +58,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setSettings(prev => ({ ...prev, ...parsed }));
         }
 
-        // 2. If authenticated, fetch from Neon database
+        // 2. If authenticated, fetch from Supabase database
         if (user) {
           const res = await fetch(`/api/settings?userId=${user.id}`);
           if (res.ok) {
