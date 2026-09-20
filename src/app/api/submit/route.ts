@@ -6,7 +6,7 @@ import path from 'path';
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const { text, image, timeLeft, apiKey, userId } = data;
+    const { text, image, timeLeft, apiKey, userId, model } = data;
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
     }
 
-    const modelName = process.env.GROQ_MODEL_NAME || 'qwen/qwen3.6-27b';
+    const modelName = model || process.env.GROQ_MODEL_NAME || 'qwen/qwen-2.5-72b-instruct';
 
     // Make request to Groq
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {

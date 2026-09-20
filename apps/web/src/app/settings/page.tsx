@@ -13,6 +13,14 @@ interface UserData {
   role?: string;
 }
 
+interface GroqModelItem {
+  id: string;
+  name: string;
+  owned_by?: string;
+  context_window?: number | null;
+  active?: boolean;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const { settings, updateSettings } = useSettings();
@@ -37,9 +45,73 @@ export default function SettingsPage() {
   // API Key & Model state
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('qwen/qwen-2.5-72b-instruct');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [availableModels, setAvailableModels] = useState<GroqModelItem[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [isCustomModel, setIsCustomModel] = useState(false);
+  const [customModelInput, setCustomModelInput] = useState('');
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [apiKeyMessage, setApiKeyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Dynamically fetch live models from Groq API
+  const fetchLiveModels = async (keyToUse?: string) => {
+    const key = keyToUse || apiKey || (typeof window !== 'undefined' ? localStorage.getItem('writeabout_apikey') || '' : '');
+    setIsLoadingModels(true);
+    try {
+      let modelsData: GroqModelItem[] = [];
+      let defModel = '';
+
+      if (key && key.trim()) {
+        try {
+          const res = await fetch('https://api.groq.com/openai/v1/models', {
+            headers: { Authorization: `Bearer ${key.trim()}` }
+          });
+          if (res.ok) {
+            const json = await res.json();
+            const list: any[] = Array.isArray(json.data) ? json.data : [];
+            const filtered = list.filter((m: any) => {
+              const id = (m.id || '').toLowerCase();
+              return !id.includes('whisper') && !id.includes('tts') && !id.includes('guard') && !id.includes('embedding') && m.active !== false;
+            });
+            modelsData = filtered.map((m: any) => ({
+              id: m.id,
+              name: m.id,
+              owned_by: m.owned_by || 'groq',
+              context_window: m.context_window,
+              active: m.active ?? true
+            }));
+            const qwen = modelsData.find(m => m.id.toLowerCase().includes('qwen'));
+            defModel = qwen ? qwen.id : (modelsData[0]?.id || '');
+          }
+        } catch (clientErr) {
+          console.error('Direct Groq models fetch error, trying backend route:', clientErr);
+        }
+      }
+
+      if (modelsData.length === 0) {
+        const res = await fetch(`/api/models${key ? `?apiKey=${encodeURIComponent(key)}` : ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.models) && data.models.length > 0) {
+            modelsData = data.models;
+            defModel = data.defaultModel || modelsData[0].id;
+          }
+        }
+      }
+
+      if (modelsData.length > 0) {
+        setAvailableModels(modelsData);
+        setSelectedModel(prev => {
+          if (prev && modelsData.some(m => m.id === prev)) return prev;
+          return defModel || modelsData[0].id;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch live models in settings:', err);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   // Modal states for Danger Zone
   const [showResetModal, setShowResetModal] = useState(false);
@@ -66,9 +138,12 @@ export default function SettingsPage() {
       setLastName(parsed.lastName || '');
 
       const storedKey = localStorage.getItem('writeabout_apikey') || '';
-      const storedModel = localStorage.getItem('writeabout_model') || 'qwen/qwen-2.5-72b-instruct';
+      const storedModel = localStorage.getItem('writeabout_model') || '';
       setApiKey(storedKey);
-      setSelectedModel(storedModel);
+      if (storedModel) {
+        setSelectedModel(storedModel);
+      }
+      fetchLiveModels(storedKey);
     } catch {
       localStorage.removeItem('writeabout_user');
       localStorage.removeItem('swifttype_user');
@@ -279,6 +354,28 @@ export default function SettingsPage() {
         return;
       }
 
+      // Also parse live models from the verified response
+      try {
+        const modelsJson = await verifyRes.json();
+        if (Array.isArray(modelsJson.data)) {
+          const filtered = modelsJson.data
+            .filter((m: any) => {
+              const id = (m.id || '').toLowerCase();
+              return !id.includes('whisper') && !id.includes('tts') && !id.includes('guard') && !id.includes('embedding') && m.active !== false;
+            })
+            .map((m: any) => ({
+              id: m.id,
+              name: m.id,
+              owned_by: m.owned_by || 'groq',
+              active: m.active ?? true
+            }));
+          if (filtered.length > 0) {
+            setAvailableModels(filtered);
+          }
+        }
+      } catch {}
+
+      const modelToSave = isCustomModel && customModelInput.trim() ? customModelInput.trim() : selectedModel;
       const saveRes = await fetch('/api/auth/save-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,8 +384,11 @@ export default function SettingsPage() {
       const saveData = await saveRes.json();
       if (saveRes.ok && saveData.success) {
         localStorage.setItem('writeabout_apikey', apiKey.trim());
-        localStorage.setItem('writeabout_model', selectedModel);
-        setApiKeyMessage({ type: 'success', text: `Groq API Key verified & saved! Active model: ${selectedModel}` });
+        if (modelToSave) {
+          localStorage.setItem('writeabout_model', modelToSave);
+          setSelectedModel(modelToSave);
+        }
+        setApiKeyMessage({ type: 'success', text: `Groq API Key verified & saved! Active model: ${modelToSave || selectedModel}` });
       } else {
         setApiKeyMessage({ type: 'error', text: saveData.error || 'Failed to save API key to server.' });
       }
@@ -706,36 +806,144 @@ export default function SettingsPage() {
                   <label className="block text-xs font-bold text-[#354d3b] uppercase tracking-wider">
                     Evaluation AI Model
                   </label>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] px-2 py-0.5 rounded-full">
-                    Default: Qwen 2.5 72B
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fetchLiveModels(apiKey)}
+                      disabled={isLoadingModels}
+                      className="text-[10px] font-semibold text-[#1e3a24] hover:text-[#059669] bg-[#e8f2e9] hover:bg-[#d8e8da] px-2 py-0.5 rounded-full border border-[#cfe2d1] transition-all cursor-pointer flex items-center gap-1"
+                      title="Fetch latest models directly from Groq API"
+                    >
+                      <span className={isLoadingModels ? "animate-spin inline-block" : ""}>↻</span>
+                      <span>{isLoadingModels ? "Fetching..." : "Fetch Live Models"}</span>
+                    </button>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] px-2 py-0.5 rounded-full">
+                      {selectedModel ? `Active: ${selectedModel.split('/').pop()}` : 'Live API List'}
+                    </span>
+                  </div>
                 </div>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => {
-                    setSelectedModel(e.target.value);
-                    localStorage.setItem('writeabout_model', e.target.value);
-                  }}
-                  className="w-full px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm text-[#1b2b20] transition-all outline-none cursor-pointer"
-                >
-                  <optgroup label="Qwen Models (Recommended)">
-                    <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B Instruct (Default · High Accuracy)</option>
-                    <option value="qwen-2.5-32b">Qwen 2.5 32B (Fast & Concise)</option>
-                    <option value="qwen-2.5-coder-32b">Qwen 2.5 Coder 32B (Structured & Strict)</option>
-                    <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (Versatile)</option>
-                  </optgroup>
-                  <optgroup label="Meta Llama Models">
-                    <option value="llama-3.3-70b-versatile">Meta Llama 3.3 70B Versatile</option>
-                    <option value="llama-3.1-8b-instant">Meta Llama 3.1 8B Instant (Ultra Fast)</option>
-                  </optgroup>
-                  <optgroup label="Other High Performance Models">
-                    <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 Distill Llama 70B (Reasoning)</option>
-                    <option value="gemma2-9b-it">Google Gemma 2 9B</option>
-                    <option value="mixtral-8x7b-32768">Mistral Mixtral 8x7B 32k</option>
-                  </optgroup>
-                </select>
+
+                {!isCustomModel ? (
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomModel(true);
+                        setCustomModelInput(selectedModel);
+                      } else {
+                        setSelectedModel(e.target.value);
+                        localStorage.setItem('writeabout_model', e.target.value);
+                      }
+                    }}
+                    disabled={isLoadingModels && availableModels.length === 0}
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm text-[#1b2b20] transition-all outline-none cursor-pointer font-mono"
+                  >
+                    {availableModels.length > 0 ? (
+                      <>
+                        {/* Dynamic Qwen Models */}
+                        {availableModels.some(m => m.id.toLowerCase().includes('qwen')) && (
+                          <optgroup label="Qwen Models (Recommended)">
+                            {availableModels
+                              .filter(m => m.id.toLowerCase().includes('qwen'))
+                              .map(m => (
+                                <option key={m.id} value={m.id}>
+                                  {m.id}
+                                </option>
+                              ))}
+                          </optgroup>
+                        )}
+
+                        {/* Dynamic Meta Llama Models */}
+                        {availableModels.some(m => m.id.toLowerCase().includes('llama')) && (
+                          <optgroup label="Meta Llama Models">
+                            {availableModels
+                              .filter(m => m.id.toLowerCase().includes('llama'))
+                              .map(m => (
+                                <option key={m.id} value={m.id}>
+                                  {m.id}
+                                </option>
+                              ))}
+                          </optgroup>
+                        )}
+
+                        {/* Dynamic DeepSeek Models */}
+                        {availableModels.some(m => m.id.toLowerCase().includes('deepseek')) && (
+                          <optgroup label="DeepSeek Models">
+                            {availableModels
+                              .filter(m => m.id.toLowerCase().includes('deepseek'))
+                              .map(m => (
+                                <option key={m.id} value={m.id}>
+                                  {m.id}
+                                </option>
+                              ))}
+                          </optgroup>
+                        )}
+
+                        {/* Dynamic Other Models */}
+                        {availableModels.some(m => !m.id.toLowerCase().includes('qwen') && !m.id.toLowerCase().includes('llama') && !m.id.toLowerCase().includes('deepseek')) && (
+                          <optgroup label="Other Available Groq Models">
+                            {availableModels
+                              .filter(m => !m.id.toLowerCase().includes('qwen') && !m.id.toLowerCase().includes('llama') && !m.id.toLowerCase().includes('deepseek'))
+                              .map(m => (
+                                <option key={m.id} value={m.id}>
+                                  {m.id}
+                                </option>
+                              ))}
+                          </optgroup>
+                        )}
+
+                        <optgroup label="Custom Option">
+                          <option value="__custom__">⚙ Enter Custom Model ID...</option>
+                        </optgroup>
+                      </>
+                    ) : (
+                      <>
+                        <option value={selectedModel || ''}>
+                          {selectedModel ? `${selectedModel} (Loading models from Groq...)` : 'Fetching available models from Groq API...'}
+                        </option>
+                        <option value="__custom__">⚙ Enter Custom Model ID...</option>
+                      </>
+                    )}
+                  </select>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={customModelInput}
+                        onChange={(e) => setCustomModelInput(e.target.value)}
+                        placeholder="e.g. qwen/qwen-2.5-72b-instruct"
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm font-mono text-[#1b2b20] transition-all outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (customModelInput.trim()) {
+                            setSelectedModel(customModelInput.trim());
+                            localStorage.setItem('writeabout_model', customModelInput.trim());
+                          }
+                          setIsCustomModel(false);
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-[#1e3a24] text-white text-xs font-bold hover:bg-[#2d5236] transition-colors cursor-pointer"
+                      >
+                        Set Model
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomModel(false)}
+                        className="px-3 py-2.5 rounded-xl bg-[#e8f2e9] text-[#1e3a24] text-xs font-bold hover:bg-[#d8e8da] transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-[#556b5a]">
+                      Type any custom model identifier available on Groq.
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-[11px] text-[#556b5a] mt-1">
-                  The selected LLM provides instant grammatical feedback and DET score analysis on image descriptions.
+                  Models are dynamically queried live from the Groq API ({availableModels.length} models loaded).
                 </p>
               </div>
 
