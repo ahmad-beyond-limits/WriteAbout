@@ -654,12 +654,44 @@ export default function WriteAboutApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
-  const [showLimitsInfo, setShowLimitsInfo] = useState(false);
-  const [showMobileNotice, setShowMobileNotice] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
+  const [showMobileNotice, setShowMobileNotice] = useState(false);
+  const [modelHealth, setModelHealth] = useState<{ testing: boolean; valid?: boolean; latencyMs?: number; error?: string } | null>(null);
+
+  // Real-time model health check probe
+  const checkModelHealth = useCallback(async (modelToCheck: string) => {
+    if (!modelToCheck || !modelToCheck.trim()) return;
+    setModelHealth({ testing: true });
+    try {
+      const key = apiKey || (typeof window !== 'undefined' ? localStorage.getItem('writeabout_apikey') || '' : '');
+      const res = await fetch('/api/models/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: modelToCheck.trim(), apiKey: key, userId: user?.id })
+      });
+      const data = await res.json();
+      if (data.success && data.valid) {
+        setModelHealth({ testing: false, valid: true, latencyMs: data.latencyMs });
+      } else {
+        setModelHealth({
+          testing: false,
+          valid: false,
+          error: data.error || 'Model is not accepting chat completions on your API key.'
+        });
+      }
+    } catch {
+      setModelHealth({ testing: false, valid: false, error: 'Connection check timed out.' });
+    }
+  }, [apiKey, user?.id]);
+
+  useEffect(() => {
+    if (selectedModel) {
+      checkModelHealth(selectedModel);
+    }
+  }, [selectedModel, checkModelHealth]);
 
   // Dynamically fetch live models from Groq API
-  const fetchLiveModels = useCallback(async (keyToUse?: string) => {
+  const fetchLiveModels = useCallback(async (keyToUse?: string, forceRefresh: boolean = false) => {
     const key = keyToUse || apiKey || (typeof window !== 'undefined' ? localStorage.getItem('writeabout_apikey') || '' : '');
     setIsLoadingModels(true);
     try {
@@ -676,16 +708,27 @@ export default function WriteAboutApp() {
             const list: any[] = Array.isArray(json.data) ? json.data : [];
             const filtered = list.filter((m: any) => {
               const id = (m.id || '').toLowerCase();
-              return !id.includes('whisper') && !id.includes('tts') && !id.includes('guard') && !id.includes('embedding') && m.active !== false;
+              return (
+                !id.includes('whisper') &&
+                !id.includes('tts') &&
+                !id.includes('guard') &&
+                !id.includes('safeguard') &&
+                !id.includes('prompt-guard') &&
+                !id.includes('embedding') &&
+                !id.includes('distil-whisper') &&
+                !id.includes('orpheus') &&
+                m.active !== false
+              );
             });
             modelsData = filtered.map((m: any) => ({
               id: m.id,
               name: m.id,
               owned_by: m.owned_by || 'groq',
               context_window: m.context_window,
-              active: m.active ?? true
+              active: m.active ?? true,
+              supports_vision: Array.isArray(m.input_modalities) ? m.input_modalities.includes('image') : (m.id.toLowerCase().includes('vision') || m.id.toLowerCase().includes('vl'))
             }));
-            const qwen = modelsData.find(m => m.id.toLowerCase().includes('qwen'));
+            const qwen = modelsData.find(m => m.id.toLowerCase().includes('qwen') && m.supports_vision) || modelsData.find(m => m.id.toLowerCase().includes('qwen'));
             defModel = qwen ? qwen.id : (modelsData[0]?.id || '');
           }
         } catch (clientErr) {
@@ -695,7 +738,7 @@ export default function WriteAboutApp() {
 
       if (modelsData.length === 0) {
         // Fallback to internal API route
-        const res = await fetch(`/api/models${key ? `?apiKey=${encodeURIComponent(key)}` : ''}`);
+        const res = await fetch(`/api/models?${key ? `apiKey=${encodeURIComponent(key)}&` : ''}refresh=${forceRefresh}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.models) && data.models.length > 0) {
@@ -784,7 +827,17 @@ export default function WriteAboutApp() {
           const filtered: GroqModelItem[] = modelsJson.data
             .filter((m: any) => {
               const id = (m.id || '').toLowerCase();
-              return !id.includes('whisper') && !id.includes('tts') && !id.includes('guard') && !id.includes('embedding') && m.active !== false;
+              return (
+                !id.includes('whisper') &&
+                !id.includes('tts') &&
+                !id.includes('guard') &&
+                !id.includes('safeguard') &&
+                !id.includes('prompt-guard') &&
+                !id.includes('embedding') &&
+                !id.includes('distil-whisper') &&
+                !id.includes('orpheus') &&
+                m.active !== false
+              );
             })
             .map((m: any) => ({
               id: m.id,
@@ -995,75 +1048,47 @@ export default function WriteAboutApp() {
 
         {/* ── Main Modal Card ── */}
         <div className="relative z-10 w-full max-w-lg my-auto py-6">
-          <div className="p-7 sm:p-9 rounded-3xl bg-white/95 border border-[#dbe6d9] shadow-[0_16px_45px_-10px_rgba(30,58,36,0.08)] backdrop-blur-xl space-y-6">
+          <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200 shadow-xl space-y-5">
             
             {/* Title Section */}
-            <div className="space-y-1 text-center">
-              <h2 className="text-2xl font-bold tracking-tight text-[#0f172a] font-['Sora',sans-serif]">
-                Connect Groq AI Engine
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                Groq AI Configuration
               </h2>
-              <p className="text-xs sm:text-sm text-[#64748b] leading-relaxed">
-                Welcome, <strong className="text-[#1e293b]">{user.username}</strong>! Add your free API key for instant diagnostic feedback.
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                Connect your Groq API key and select a model for AI writing evaluation.
               </p>
             </div>
 
-            {/* ── 100% Free & Unlimited Callout Banner ── */}
-            <div className="p-4 sm:p-4.5 rounded-2xl bg-[#ecfdf5] border border-[#a7f3d0] space-y-2.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse" />
-                <span className="text-xs font-bold text-[#065f46] uppercase tracking-wider font-['Sora',sans-serif]">
-                  No Pricing · 100% Free & Unlimited
-                </span>
-              </div>
-              <p className="text-xs text-[#047857] leading-relaxed">
-                Groq provides fast, free API keys with generous rate limits at zero cost. No credit card or subscription needed.
-              </p>
-              <div className="pt-1">
+            {/* ── Free Key Info Callout ── */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center justify-between gap-3">
+              <div>
+                <span className="font-semibold text-slate-800">Free API Key:</span> Get a free key with generous limits on{' '}
                 <a
                   href="https://groq.com/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#10b981] hover:bg-[#059669] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-xs"
+                  className="text-emerald-700 font-semibold underline hover:text-emerald-800"
                 >
-                  <span>Get Free API Key on Groq.com</span>
-                  <span className="text-sm">↗</span>
+                  groq.com
                 </a>
               </div>
             </div>
 
-            {/* ── 3-Step Micro Guide ── */}
-            <div className="space-y-2 text-xs text-[#475569] bg-[#f8fafc] p-3.5 rounded-2xl border border-[#e2e8f0]">
-              <div className="font-semibold text-[#0f172a] text-[11.5px] uppercase tracking-wider">
-                How to get your key in 30 seconds:
-              </div>
-              <div className="space-y-1 text-[11.5px] text-[#64748b]">
-                <div>1. Open <a href="https://groq.com/" target="_blank" rel="noopener noreferrer" className="text-[#059669] font-bold underline">groq.com</a> and sign in with Google or GitHub (Free).</div>
-                <div>2. Go to <strong>API Keys</strong> and click <strong>Create API Key</strong>.</div>
-                <div>3. Paste your key (<code className="text-[#0f172a] bg-white px-1 py-0.5 rounded border border-[#e2e8f0]">gsk_...</code>) below.</div>
-              </div>
-            </div>
-
             {/* ── AI Model Selector ── */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wider text-[#334155] block">
-                  AI Evaluation Model
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block">
+                  Evaluation Model
                 </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fetchLiveModels(apiKey)}
-                    disabled={isLoadingModels}
-                    className="text-[10px] font-semibold text-[#1e3a24] hover:text-[#059669] bg-[#e8f2e9] hover:bg-[#d8e8da] px-2 py-0.5 rounded-full border border-[#cfe2d1] transition-all cursor-pointer flex items-center gap-1"
-                    title="Fetch latest models directly from Groq API"
-                  >
-                    <span className={isLoadingModels ? "animate-spin inline-block" : ""}>↻</span>
-                    <span>{isLoadingModels ? "Fetching..." : "Fetch Live Models"}</span>
-                  </button>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] px-2 py-0.5 rounded-full border border-[#cfe2d1]">
-                    {selectedModel ? `Active: ${selectedModel.split('/').pop()}${availableModels.find(m => m.id === selectedModel)?.supports_vision ? ' 👁 (Vision)' : ' ✍ (Text)'}` : 'Live API List'}
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchLiveModels(apiKey, true)}
+                  disabled={isLoadingModels}
+                  className="text-[11px] font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  {isLoadingModels ? 'Fetching models...' : 'Refresh list'}
+                </button>
               </div>
 
               {!isCustomModel ? (
@@ -1079,72 +1104,68 @@ export default function WriteAboutApp() {
                     }
                   }}
                   disabled={isLoadingModels && availableModels.length === 0}
-                  className="w-full px-4 py-3.5 rounded-2xl bg-[#fafbfc] border border-[#dbe6d9] focus:bg-white focus:border-[#10b981] focus:ring-2 focus:ring-[#10b981]/20 outline-none text-xs font-semibold text-[#0f172a] transition-all cursor-pointer font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[#1e3a24] focus:ring-1 focus:ring-[#1e3a24] outline-none text-xs sm:text-sm text-slate-800 transition-all cursor-pointer"
                 >
                   {availableModels.length > 0 ? (
                     <>
-                      {/* Dynamic Qwen Models */}
                       {availableModels.some(m => m.id.toLowerCase().includes('qwen')) && (
-                        <optgroup label="Qwen Models (Recommended)">
+                        <optgroup label="Recommended (Qwen)">
                           {availableModels
                             .filter(m => m.id.toLowerCase().includes('qwen'))
                             .map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                {m.id}{m.supports_vision ? ' (Vision)' : ''}
                               </option>
                             ))}
                         </optgroup>
                       )}
 
-                      {/* Dynamic Meta Llama Models */}
                       {availableModels.some(m => m.id.toLowerCase().includes('llama')) && (
-                        <optgroup label="Meta Llama Models">
+                        <optgroup label="Meta Llama">
                           {availableModels
                             .filter(m => m.id.toLowerCase().includes('llama'))
                             .map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                {m.id}{m.supports_vision ? ' (Vision)' : ''}
                               </option>
                             ))}
                         </optgroup>
                       )}
 
-                      {/* Dynamic DeepSeek Models */}
                       {availableModels.some(m => m.id.toLowerCase().includes('deepseek')) && (
-                        <optgroup label="DeepSeek Models">
+                        <optgroup label="DeepSeek">
                           {availableModels
                             .filter(m => m.id.toLowerCase().includes('deepseek'))
                             .map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                {m.id}{m.supports_vision ? ' (Vision)' : ''}
                               </option>
                             ))}
                         </optgroup>
                       )}
 
-                      {/* Dynamic Other Models */}
                       {availableModels.some(m => !m.id.toLowerCase().includes('qwen') && !m.id.toLowerCase().includes('llama') && !m.id.toLowerCase().includes('deepseek')) && (
-                        <optgroup label="Other Available Models">
+                        <optgroup label="Other Models">
                           {availableModels
                             .filter(m => !m.id.toLowerCase().includes('qwen') && !m.id.toLowerCase().includes('llama') && !m.id.toLowerCase().includes('deepseek'))
                             .map(m => (
                               <option key={m.id} value={m.id}>
-                                {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                {m.id}{m.supports_vision ? ' (Vision)' : ''}
                               </option>
                             ))}
                         </optgroup>
                       )}
 
-                      <optgroup label="Custom Option">
-                        <option value="__custom__">⚙ Enter Custom Model ID...</option>
+                      <optgroup label="Custom">
+                        <option value="__custom__">Enter custom model ID...</option>
                       </optgroup>
                     </>
                   ) : (
                     <>
                       <option value={selectedModel || ''}>
-                        {selectedModel ? `${selectedModel} (Loading models from Groq...)` : 'Fetching available models from Groq API...'}
+                        {selectedModel ? selectedModel : 'Loading available models...'}
                       </option>
-                      <option value="__custom__">⚙ Enter Custom Model ID...</option>
+                      <option value="__custom__">Enter custom model ID...</option>
                     </>
                   )}
                 </select>
@@ -1154,8 +1175,8 @@ export default function WriteAboutApp() {
                     type="text"
                     value={customModelInput}
                     onChange={(e) => setCustomModelInput(e.target.value)}
-                    placeholder="e.g. qwen/qwen-2.5-72b-instruct"
-                    className="flex-1 px-4 py-3 rounded-2xl bg-[#fafbfc] border border-[#dbe6d9] focus:bg-white focus:border-[#10b981] focus:ring-2 focus:ring-[#10b981]/20 outline-none text-xs font-mono text-[#0f172a] transition-all"
+                    placeholder="e.g. qwen/qwen3.8-27b"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[#1e3a24] focus:ring-1 focus:ring-[#1e3a24] outline-none text-xs sm:text-sm text-slate-800 transition-all font-mono"
                   />
                   <button
                     type="button"
@@ -1166,44 +1187,79 @@ export default function WriteAboutApp() {
                       }
                       setIsCustomModel(false);
                     }}
-                    className="px-4 py-3 rounded-2xl bg-[#10b981] text-white text-xs font-bold hover:bg-[#059669] transition-colors cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-[#1e3a24] text-white text-xs font-semibold hover:bg-[#162d1c] transition-colors cursor-pointer"
                   >
-                    Set Model
+                    Set
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsCustomModel(false)}
-                    className="px-3 py-3 rounded-2xl bg-[#e2e8f0] text-[#334155] text-xs font-bold hover:bg-[#cbd5e1] transition-colors cursor-pointer"
+                    className="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                 </div>
               )}
 
-              <p className="text-[11px] text-[#64748b] leading-relaxed">
-                Models are dynamically loaded from Groq API ({availableModels.length} models available).
-              </p>
+              {/* Model Health Status */}
+              {modelHealth && (
+                <div className="pt-0.5">
+                  {modelHealth.testing ? (
+                    <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                      <span className="w-2.5 h-2.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin shrink-0" />
+                      <span>Checking model availability...</span>
+                    </div>
+                  ) : modelHealth.valid ? (
+                    <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span>
+                        Active & responding{typeof modelHealth.latencyMs === 'number' ? ` (${modelHealth.latencyMs}ms)` : ''}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <span className="font-semibold">Model unavailable: </span>
+                          <span className="text-rose-700">{modelHealth.error}</span>
+                        </div>
+                        {availableModels.some(m => m.id.toLowerCase().includes('qwen')) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const rec = availableModels.find(m => m.id.toLowerCase().includes('qwen') && m.supports_vision) ||
+                                          availableModels.find(m => m.id.toLowerCase().includes('qwen')) ||
+                                          availableModels[0];
+                              if (rec) {
+                                setSelectedModel(rec.id);
+                                localStorage.setItem('writeabout_model', rec.id);
+                              }
+                            }}
+                            className="text-xs font-semibold text-rose-900 underline hover:text-rose-950 shrink-0 cursor-pointer"
+                          >
+                            Use recommended
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── API Key Input ── */}
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-[#334155] block">
-                Your Groq API Key
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 block">
+                Groq API Key
               </label>
               <input
-                type="text"
+                type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="gsk_..."
                 autoFocus
-                className="w-full px-4 py-3.5 rounded-2xl bg-[#fafbfc] border border-[#dbe6d9] focus:bg-white focus:border-[#10b981] focus:ring-2 focus:ring-[#10b981]/20 outline-none text-xs font-mono text-[#0f172a] transition-all placeholder:text-[#94a3b8]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 focus:border-[#1e3a24] focus:ring-1 focus:ring-[#1e3a24] outline-none text-xs sm:text-sm font-mono text-slate-800 transition-all placeholder:text-slate-400"
               />
-              {apiKey.startsWith('gsk_') && (
-                <div className="flex items-center gap-1.5 text-xs text-[#059669] font-medium pt-0.5">
-                  <span>✓</span>
-                  <span>Valid Groq API key format</span>
-                </div>
-              )}
             </div>
 
             {authStatus && (
@@ -1216,17 +1272,16 @@ export default function WriteAboutApp() {
             <div className="flex items-center gap-3 pt-2">
               <Link
                 href="/hub"
-                className="flex-1 py-3.5 px-4 rounded-2xl bg-[#edf4ed] hover:bg-[#e1ede1] text-[#2c4731] text-xs font-bold uppercase tracking-wider text-center transition-all"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold uppercase tracking-wider text-center transition-all"
               >
                 Cancel
               </Link>
               <button
                 onClick={handleApiKeyVerify}
                 disabled={isLoadingAuth}
-                className="flex-[2] py-3.5 px-5 rounded-2xl bg-[#1e3a24] hover:bg-[#162d1c] disabled:opacity-50 text-[#f2f7f2] text-xs font-bold uppercase tracking-wider transition-all text-center shadow-[0_4px_14px_rgba(30,58,36,0.18)] flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-[2] py-2.5 px-5 rounded-xl bg-[#1e3a24] hover:bg-[#162d1c] disabled:opacity-50 text-white text-xs font-semibold uppercase tracking-wider transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>{isLoadingAuth ? 'Verifying Key...' : 'Verify & Start Practice'}</span>
-                <span className="text-sm">→</span>
+                <span>{isLoadingAuth ? 'Verifying...' : 'Save & Start Practice'}</span>
               </button>
             </div>
 

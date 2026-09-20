@@ -53,9 +53,42 @@ export default function SettingsPage() {
   const [customModelInput, setCustomModelInput] = useState('');
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [apiKeyMessage, setApiKeyMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [modelHealth, setModelHealth] = useState<{ testing: boolean; valid?: boolean; latencyMs?: number; error?: string } | null>(null);
+
+  // Real-time model health check probe
+  const checkModelHealth = async (modelToCheck: string) => {
+    if (!modelToCheck || !modelToCheck.trim()) return;
+    setModelHealth({ testing: true });
+    try {
+      const key = apiKey || (typeof window !== 'undefined' ? localStorage.getItem('writeabout_apikey') || '' : '');
+      const res = await fetch('/api/models/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: modelToCheck.trim(), apiKey: key, userId: user?.id })
+      });
+      const data = await res.json();
+      if (data.success && data.valid) {
+        setModelHealth({ testing: false, valid: true, latencyMs: data.latencyMs });
+      } else {
+        setModelHealth({
+          testing: false,
+          valid: false,
+          error: data.error || 'Model is not accepting chat completions on your API key.'
+        });
+      }
+    } catch {
+      setModelHealth({ testing: false, valid: false, error: 'Connection check timed out.' });
+    }
+  };
+
+  useEffect(() => {
+    if (selectedModel) {
+      checkModelHealth(selectedModel);
+    }
+  }, [selectedModel, apiKey, user?.id]);
 
   // Dynamically fetch live models from Groq API
-  const fetchLiveModels = async (keyToUse?: string) => {
+  const fetchLiveModels = async (keyToUse?: string, forceRefresh: boolean = false) => {
     const key = keyToUse || apiKey || (typeof window !== 'undefined' ? localStorage.getItem('writeabout_apikey') || '' : '');
     setIsLoadingModels(true);
     try {
@@ -72,16 +105,27 @@ export default function SettingsPage() {
             const list: any[] = Array.isArray(json.data) ? json.data : [];
             const filtered = list.filter((m: any) => {
               const id = (m.id || '').toLowerCase();
-              return !id.includes('whisper') && !id.includes('tts') && !id.includes('guard') && !id.includes('embedding') && m.active !== false;
+              return (
+                !id.includes('whisper') &&
+                !id.includes('tts') &&
+                !id.includes('guard') &&
+                !id.includes('safeguard') &&
+                !id.includes('prompt-guard') &&
+                !id.includes('embedding') &&
+                !id.includes('distil-whisper') &&
+                !id.includes('orpheus') &&
+                m.active !== false
+              );
             });
             modelsData = filtered.map((m: any) => ({
               id: m.id,
               name: m.id,
               owned_by: m.owned_by || 'groq',
               context_window: m.context_window,
-              active: m.active ?? true
+              active: m.active ?? true,
+              supports_vision: Array.isArray(m.input_modalities) ? m.input_modalities.includes('image') : (m.id.toLowerCase().includes('vision') || m.id.toLowerCase().includes('vl'))
             }));
-            const qwen = modelsData.find(m => m.id.toLowerCase().includes('qwen'));
+            const qwen = modelsData.find(m => m.id.toLowerCase().includes('qwen') && m.supports_vision) || modelsData.find(m => m.id.toLowerCase().includes('qwen'));
             defModel = qwen ? qwen.id : (modelsData[0]?.id || '');
           }
         } catch (clientErr) {
@@ -90,7 +134,7 @@ export default function SettingsPage() {
       }
 
       if (modelsData.length === 0) {
-        const res = await fetch(`/api/models${key ? `?apiKey=${encodeURIComponent(key)}` : ''}`);
+        const res = await fetch(`/api/models?${key ? `apiKey=${encodeURIComponent(key)}&` : ''}refresh=${forceRefresh}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.models) && data.models.length > 0) {
@@ -362,7 +406,17 @@ export default function SettingsPage() {
           const filtered = modelsJson.data
             .filter((m: any) => {
               const id = (m.id || '').toLowerCase();
-              return !id.includes('whisper') && !id.includes('tts') && !id.includes('guard') && !id.includes('embedding') && m.active !== false;
+              return (
+                !id.includes('whisper') &&
+                !id.includes('tts') &&
+                !id.includes('guard') &&
+                !id.includes('safeguard') &&
+                !id.includes('prompt-guard') &&
+                !id.includes('embedding') &&
+                !id.includes('distil-whisper') &&
+                !id.includes('orpheus') &&
+                m.active !== false
+              );
             })
             .map((m: any) => ({
               id: m.id,
@@ -805,23 +859,16 @@ export default function SettingsPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-[#354d3b] uppercase tracking-wider">
-                    Evaluation AI Model
+                    Evaluation Model
                   </label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => fetchLiveModels(apiKey)}
-                      disabled={isLoadingModels}
-                      className="text-[10px] font-semibold text-[#1e3a24] hover:text-[#059669] bg-[#e8f2e9] hover:bg-[#d8e8da] px-2 py-0.5 rounded-full border border-[#cfe2d1] transition-all cursor-pointer flex items-center gap-1"
-                      title="Fetch latest models directly from Groq API"
-                    >
-                      <span className={isLoadingModels ? "animate-spin inline-block" : ""}>↻</span>
-                      <span>{isLoadingModels ? "Fetching..." : "Fetch Live Models"}</span>
-                    </button>
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] px-2 py-0.5 rounded-full">
-                      {selectedModel ? `Active: ${selectedModel.split('/').pop()}${availableModels.find(m => m.id === selectedModel)?.supports_vision ? ' 👁 (Vision)' : ' ✍ (Text)'}` : 'Live API List'}
-                    </span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fetchLiveModels(apiKey, true)}
+                    disabled={isLoadingModels}
+                    className="text-[11px] font-medium text-[#556b5a] hover:text-[#1b2b20] transition-colors cursor-pointer"
+                  >
+                    {isLoadingModels ? 'Fetching models...' : 'Refresh list'}
+                  </button>
                 </div>
 
                 {!isCustomModel ? (
@@ -837,18 +884,18 @@ export default function SettingsPage() {
                       }
                     }}
                     disabled={isLoadingModels && availableModels.length === 0}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm text-[#1b2b20] transition-all outline-none cursor-pointer font-mono"
+                    className="w-full px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm text-[#1b2b20] transition-all outline-none cursor-pointer"
                   >
                     {availableModels.length > 0 ? (
                       <>
                         {/* Dynamic Qwen Models */}
                         {availableModels.some(m => m.id.toLowerCase().includes('qwen')) && (
-                          <optgroup label="Qwen Models (Recommended)">
+                          <optgroup label="Recommended (Qwen)">
                             {availableModels
                               .filter(m => m.id.toLowerCase().includes('qwen'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                  {m.id}{m.supports_vision ? ' (Vision)' : ''}
                                 </option>
                               ))}
                           </optgroup>
@@ -856,12 +903,12 @@ export default function SettingsPage() {
 
                         {/* Dynamic Meta Llama Models */}
                         {availableModels.some(m => m.id.toLowerCase().includes('llama')) && (
-                          <optgroup label="Meta Llama Models">
+                          <optgroup label="Meta Llama">
                             {availableModels
                               .filter(m => m.id.toLowerCase().includes('llama'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                  {m.id}{m.supports_vision ? ' (Vision)' : ''}
                                 </option>
                               ))}
                           </optgroup>
@@ -869,12 +916,12 @@ export default function SettingsPage() {
 
                         {/* Dynamic DeepSeek Models */}
                         {availableModels.some(m => m.id.toLowerCase().includes('deepseek')) && (
-                          <optgroup label="DeepSeek Models">
+                          <optgroup label="DeepSeek">
                             {availableModels
                               .filter(m => m.id.toLowerCase().includes('deepseek'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                  {m.id}{m.supports_vision ? ' (Vision)' : ''}
                                 </option>
                               ))}
                           </optgroup>
@@ -882,27 +929,27 @@ export default function SettingsPage() {
 
                         {/* Dynamic Other Models */}
                         {availableModels.some(m => !m.id.toLowerCase().includes('qwen') && !m.id.toLowerCase().includes('llama') && !m.id.toLowerCase().includes('deepseek')) && (
-                          <optgroup label="Other Available Groq Models">
+                          <optgroup label="Other Models">
                             {availableModels
                               .filter(m => !m.id.toLowerCase().includes('qwen') && !m.id.toLowerCase().includes('llama') && !m.id.toLowerCase().includes('deepseek'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
+                                  {m.id}{m.supports_vision ? ' (Vision)' : ''}
                                 </option>
                               ))}
                           </optgroup>
                         )}
 
-                        <optgroup label="Custom Option">
-                          <option value="__custom__">⚙ Enter Custom Model ID...</option>
+                        <optgroup label="Custom">
+                          <option value="__custom__">Enter custom model ID...</option>
                         </optgroup>
                       </>
                     ) : (
                       <>
                         <option value={selectedModel || ''}>
-                          {selectedModel ? `${selectedModel} (Loading models from Groq...)` : 'Fetching available models from Groq API...'}
+                          {selectedModel ? selectedModel : 'Loading available models...'}
                         </option>
-                        <option value="__custom__">⚙ Enter Custom Model ID...</option>
+                        <option value="__custom__">Enter custom model ID...</option>
                       </>
                     )}
                   </select>
@@ -913,7 +960,7 @@ export default function SettingsPage() {
                         type="text"
                         value={customModelInput}
                         onChange={(e) => setCustomModelInput(e.target.value)}
-                        placeholder="e.g. qwen/qwen-2.5-72b-instruct"
+                        placeholder="e.g. qwen/qwen3.8-27b"
                         className="flex-1 px-4 py-2.5 rounded-xl bg-[#f8faf7] border border-[#d8e3d6] focus:border-[#1e3a24] focus:bg-white text-sm font-mono text-[#1b2b20] transition-all outline-none"
                       />
                       <button
@@ -937,15 +984,53 @@ export default function SettingsPage() {
                         Cancel
                       </button>
                     </div>
-                    <p className="text-[11px] text-[#556b5a]">
-                      Type any custom model identifier available on Groq.
-                    </p>
                   </div>
                 )}
 
-                <p className="text-[11px] text-[#556b5a] mt-1">
-                  Models are dynamically queried live from the Groq API ({availableModels.length} models loaded).
-                </p>
+                {/* Model Health Status */}
+                {modelHealth && (
+                  <div className="pt-2">
+                    {modelHealth.testing ? (
+                      <div className="flex items-center gap-2 text-xs text-[#556b5a] font-medium">
+                        <span className="w-2.5 h-2.5 border-2 border-slate-300 border-t-[#1e3a24] rounded-full animate-spin shrink-0" />
+                        <span>Checking model availability...</span>
+                      </div>
+                    ) : modelHealth.valid ? (
+                      <div className="flex items-center gap-2 text-xs text-emerald-700 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>
+                          Active & responding{typeof modelHealth.latencyMs === 'number' ? ` (${modelHealth.latencyMs}ms)` : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <span className="font-semibold">Model unavailable: </span>
+                            <span className="text-rose-700">{modelHealth.error}</span>
+                          </div>
+                          {availableModels.some(m => m.id.toLowerCase().includes('qwen')) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const rec = availableModels.find(m => m.id.toLowerCase().includes('qwen') && m.supports_vision) ||
+                                            availableModels.find(m => m.id.toLowerCase().includes('qwen')) ||
+                                            availableModels[0];
+                                if (rec) {
+                                  setSelectedModel(rec.id);
+                                  localStorage.setItem('writeabout_model', rec.id);
+                                }
+                              }}
+                              className="text-xs font-semibold text-rose-900 underline hover:text-rose-950 shrink-0 cursor-pointer"
+                            >
+                              Use recommended
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* API Key Input */}

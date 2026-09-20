@@ -71,10 +71,11 @@ export async function GET(request: Request) {
       }, { status: 400 });
     }
 
-    // Check cache
+    // Check cache (unless refresh=true is requested)
+    const forceRefresh = searchParams.get('refresh') === 'true';
     const cacheKey = apiKey.trim().substring(0, 16);
     const cached = modelsCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
       return NextResponse.json(cached.data);
     }
 
@@ -101,10 +102,19 @@ export async function GET(request: Request) {
     const data = await groqRes.json();
     const rawList: any[] = Array.isArray(data.data) ? data.data : [];
 
-    // Filter out audio/whisper/guard/speech models that cannot be used for writing evaluation
+    // Filter out audio/whisper/guard/speech/terms-blocked models that cannot be used for writing evaluation
     const chatModels = rawList.filter((m: any) => {
       const id = (m.id || '').toLowerCase();
-      if (id.includes('whisper') || id.includes('tts') || id.includes('guard') || id.includes('embedding') || id.includes('distil-whisper')) {
+      if (
+        id.includes('whisper') ||
+        id.includes('tts') ||
+        id.includes('guard') ||
+        id.includes('safeguard') ||
+        id.includes('prompt-guard') ||
+        id.includes('embedding') ||
+        id.includes('distil-whisper') ||
+        id.includes('orpheus')
+      ) {
         return false;
       }
       if (Array.isArray(m.output_modalities) && m.output_modalities.includes('speech')) {
