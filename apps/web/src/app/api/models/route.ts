@@ -22,6 +22,19 @@ function decryptApiKey(encryptedText: string): string | null {
   }
 }
 
+// In-memory cache for models (60s TTL)
+interface CachedModelsEntry {
+  timestamp: number;
+  data: {
+    success: boolean;
+    models: any[];
+    defaultModel: string;
+    count: number;
+  };
+}
+const modelsCache = new Map<string, CachedModelsEntry>();
+const CACHE_TTL_MS = 60 * 1000;
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -58,12 +71,18 @@ export async function GET(request: Request) {
       }, { status: 400 });
     }
 
+    // Check cache
+    const cacheKey = apiKey.trim().substring(0, 16);
+    const cached = modelsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return NextResponse.json(cached.data);
+    }
+
     // 2. Fetch live models list directly from Groq API
     const groqRes = await fetch('https://api.groq.com/openai/v1/models', {
       headers: {
         Authorization: `Bearer ${apiKey.trim()}`
-      },
-      next: { revalidate: 60 } // Cache for 60s
+      }
     });
 
     if (!groqRes.ok) {
@@ -82,10 +101,16 @@ export async function GET(request: Request) {
     const data = await groqRes.json();
     const rawList: any[] = Array.isArray(data.data) ? data.data : [];
 
-    // Filter out audio/whisper/guard models that cannot be used for text evaluation
+    // Filter out audio/whisper/guard/speech models that cannot be used for writing evaluation
     const chatModels = rawList.filter((m: any) => {
       const id = (m.id || '').toLowerCase();
       if (id.includes('whisper') || id.includes('tts') || id.includes('guard') || id.includes('embedding') || id.includes('distil-whisper')) {
+        return false;
+      }
+      if (Array.isArray(m.output_modalities) && m.output_modalities.includes('speech')) {
+        return false;
+      }
+      if (Array.isArray(m.input_modalities) && m.input_modalities.length === 1 && m.input_modalities[0] === 'audio') {
         return false;
       }
       if (m.active === false) return false;
@@ -97,43 +122,62 @@ export async function GET(request: Request) {
       const aId = (a.id || '').toLowerCase();
       const bId = (b.id || '').toLowerCase();
 
-      const getPriority = (id: string) => {
-        if (id.includes('qwen-2.5-72b') || id.includes('qwen/qwen-2.5-72b')) return 1;
+      const getPriority = (id: string, m: any) => {
+        const isVision = Array.isArray(m.input_modalities) && m.input_modalities.includes('image');
+        if (id.includes('qwen') && isVision) return 1;
         if (id.includes('qwen')) return 2;
-        if (id.includes('llama-3.3')) return 3;
-        if (id.includes('llama-3.1')) return 4;
-        if (id.includes('deepseek')) return 5;
-        if (id.includes('gemma')) return 6;
+        if (isVision) return 3;
+        if (id.includes('llama-3.3') || id.includes('llama-3.2')) return 4;
+        if (id.includes('llama-3.1')) return 5;
+        if (id.includes('deepseek')) return 6;
+        if (id.includes('gemma')) return 7;
         return 10;
       };
 
-      const pA = getPriority(aId);
-      const pB = getPriority(bId);
+      const pA = getPriority(aId, a);
+      const pB = getPriority(bId, b);
 
       if (pA !== pB) return pA - pB;
       return aId.localeCompare(bId);
     });
 
-    const formattedModels = sortedModels.map((m: any) => ({
-      id: m.id,
-      name: m.id,
-      owned_by: m.owned_by || 'groq',
-      context_window: m.context_window || null,
-      active: m.active ?? true
-    }));
+    const formattedModels = sortedModels.map((m: any) => {
+      const isVision = Array.isArray(m.input_modalities)
+        ? m.input_modalities.includes('image')
+        : (m.id.toLowerCase().includes('vision') || m.id.toLowerCase().includes('vl'));
 
-    // Detect best default model (first Qwen model, or first model in sorted list)
+      return {
+        id: m.id,
+        name: m.id,
+        owned_by: m.owned_by || 'groq',
+        context_window: m.context_window || null,
+        active: m.active ?? true,
+        supports_vision: isVision,
+        input_modalities: m.input_modalities || (isVision ? ['text', 'image'] : ['text'])
+      };
+    });
+
+    // Detect best default model (first Qwen vision model, or first Qwen model, or first model in sorted list)
     const defaultModel =
+      formattedModels.find(m => m.id.toLowerCase().includes('qwen') && m.supports_vision)?.id ||
       formattedModels.find(m => m.id.toLowerCase().includes('qwen'))?.id ||
       formattedModels[0]?.id ||
       '';
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       models: formattedModels,
       defaultModel,
       count: formattedModels.length
+    };
+
+    // Store in cache
+    modelsCache.set(cacheKey, {
+      timestamp: Date.now(),
+      data: responseData
     });
+
+    return NextResponse.json(responseData);
   } catch (err: any) {
     console.error('Error in /api/models route:', err);
     return NextResponse.json({

@@ -51,6 +51,51 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     // Default to Qwen model if not specified
     const modelName = model || process.env.GROQ_MODEL_NAME || 'qwen/qwen-2.5-72b-instruct';
 
+    // Determine if the selected model is vision-capable
+    const isLikelyVisionModel = (
+      modelName.toLowerCase().includes('vision') ||
+      modelName.toLowerCase().includes('vl') ||
+      modelName.toLowerCase().includes('qwen3.8') ||
+      modelName.toLowerCase().includes('llava')
+    );
+
+    let directImageUrl = '';
+    if (resolvedImage && isLikelyVisionModel && resolvedImage.startsWith('http')) {
+      try {
+        const headRes = await fetch(resolvedImage, { method: 'HEAD', redirect: 'follow' });
+        directImageUrl = headRes.url || resolvedImage;
+      } catch {
+        directImageUrl = resolvedImage;
+      }
+    }
+
+    const buildMessages = (useVision: boolean) => {
+      if (useVision && directImageUrl) {
+        return [
+          { role: 'system', content: systemPrompt },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Please evaluate this candidate's description according to the image and DET scoring rubric:\n\n"${text}"`
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: directImageUrl
+                }
+              }
+            ]
+          }
+        ];
+      }
+      return [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Please evaluate this description of the image:\n\n"${text}"` }
+      ];
+    };
+
     // ── 1. Primary Request to Groq using User's API Key ──
     let groqRes: Response;
     try {
@@ -62,14 +107,32 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
         },
         body: JSON.stringify({
           model: modelName,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Please evaluate this description of the image:\n\n"${text}"` }
-          ],
+          messages: buildMessages(isLikelyVisionModel),
           temperature: 0.2,
           max_completion_tokens: 2048
         })
       });
+
+      // If vision request failed due to media/modality error (e.g. 400), gracefully retry with text fallback
+      if (!groqRes.ok && isLikelyVisionModel && groqRes.status === 400) {
+        const errCloned = await groqRes.clone().text();
+        if (errCloned.includes('media') || errCloned.includes('image') || errCloned.includes('modality') || errCloned.includes('vision')) {
+          console.warn('Vision payload rejected by Groq, retrying with language-only payload...');
+          groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${groqKey.trim()}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: modelName,
+              messages: buildMessages(false),
+              temperature: 0.2,
+              max_completion_tokens: 2048
+            })
+          });
+        }
+      }
     } catch (networkErr: any) {
       console.error('Groq fetch network error:', networkErr);
       return NextResponse.json({
@@ -179,7 +242,32 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
 
     if (envGroqKey) {
       try {
-        const envPrompt = `You are a strict DET scoring evaluator.
+        // Read competence prompt template from competence-levels.md
+        let competenceTemplate = '';
+        const competencePaths = [
+          path.join(process.cwd(), 'competence-levels.md'),
+          path.join(process.cwd(), 'apps/web/competence-levels.md'),
+          path.join(__dirname, '../../../../competence-levels.md'),
+          path.join(__dirname, '../../competence-levels.md')
+        ];
+
+        for (const cp of competencePaths) {
+          if (fs.existsSync(cp)) {
+            try {
+              competenceTemplate = fs.readFileSync(cp, 'utf-8');
+              if (competenceTemplate) break;
+            } catch (e) {}
+          }
+        }
+
+        let envPrompt = '';
+        if (competenceTemplate) {
+          envPrompt = competenceTemplate
+            .replace(/\{\{TEXT\}\}/g, text)
+            .replace(/\{\{TOTAL_WORDS\}\}/g, String(wordCount))
+            .replace(/\{\{TOTAL_SENTENCES\}\}/g, String(calculatedSentences));
+        } else {
+          envPrompt = `You are a strict DET scoring evaluator.
 Analyze the following student writing about the image:
 "${text}"
 
@@ -198,6 +286,7 @@ Return ONLY valid JSON:
   "level3": 1-5,
   "level4": 1-5
 }`;
+        }
 
         const secondaryRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',

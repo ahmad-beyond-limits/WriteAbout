@@ -19,6 +19,7 @@ interface GroqModelItem {
   owned_by?: string;
   context_window?: number | null;
   active?: boolean;
+  supports_vision?: boolean;
 }
 
 export default function SettingsPage() {
@@ -818,7 +819,7 @@ export default function SettingsPage() {
                       <span>{isLoadingModels ? "Fetching..." : "Fetch Live Models"}</span>
                     </button>
                     <span className="text-[10px] font-bold uppercase tracking-wider bg-[#e8f2e9] text-[#1e3a24] px-2 py-0.5 rounded-full">
-                      {selectedModel ? `Active: ${selectedModel.split('/').pop()}` : 'Live API List'}
+                      {selectedModel ? `Active: ${selectedModel.split('/').pop()}${availableModels.find(m => m.id === selectedModel)?.supports_vision ? ' 👁 (Vision)' : ' ✍ (Text)'}` : 'Live API List'}
                     </span>
                   </div>
                 </div>
@@ -847,7 +848,7 @@ export default function SettingsPage() {
                               .filter(m => m.id.toLowerCase().includes('qwen'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id}
+                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
                                 </option>
                               ))}
                           </optgroup>
@@ -860,7 +861,7 @@ export default function SettingsPage() {
                               .filter(m => m.id.toLowerCase().includes('llama'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id}
+                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
                                 </option>
                               ))}
                           </optgroup>
@@ -873,7 +874,7 @@ export default function SettingsPage() {
                               .filter(m => m.id.toLowerCase().includes('deepseek'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id}
+                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
                                 </option>
                               ))}
                           </optgroup>
@@ -886,7 +887,7 @@ export default function SettingsPage() {
                               .filter(m => !m.id.toLowerCase().includes('qwen') && !m.id.toLowerCase().includes('llama') && !m.id.toLowerCase().includes('deepseek'))
                               .map(m => (
                                 <option key={m.id} value={m.id}>
-                                  {m.id}
+                                  {m.id} {m.supports_vision ? '· Vision & Photo 👁' : '· Text & Grammar ✍'}
                                 </option>
                               ))}
                           </optgroup>
