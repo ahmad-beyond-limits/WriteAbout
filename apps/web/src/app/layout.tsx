@@ -8,8 +8,7 @@ export const metadata: Metadata = {
   description: "Visual writing challenges and precision speed typing tests.",
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" }
+      { url: "/icon.svg", type: "image/svg+xml" }
     ],
     shortcut: "/icon.svg",
     apple: "/icon.svg"

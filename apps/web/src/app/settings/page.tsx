@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/lib/SettingsContext';
+import { DuolingoCatIcon } from '@/components/DuolingoCatIcon';
 
 interface UserData {
   id: number;
@@ -489,13 +490,7 @@ export default function SettingsPage() {
         {/* Top Header */}
         <header className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 rounded-2xl bg-white/85 border border-[#e1e9df] shadow-[0_4px_24px_rgba(27,43,32,0.03)] backdrop-blur-xl">
           <Link href="/hub" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-[#1e3a24] flex items-center justify-center text-[#e8f2e9] font-bold text-sm shadow-xs transition-transform group-hover:scale-105 shrink-0">
-              <svg className="w-4 h-4 text-[#a3d9ad]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
+            <DuolingoCatIcon className="w-8 h-8 rounded-xl shadow-xs transition-transform group-hover:scale-105 shrink-0" />
             <span className="text-base sm:text-lg font-bold tracking-tight text-[#1b2b20]">
               duoprep
             </span>
@@ -808,13 +803,7 @@ export default function SettingsPage() {
           <section className="bg-white/90 border border-[#e1e9df] rounded-3xl p-6 sm:p-7 shadow-[0_4px_24px_rgba(27,43,32,0.04)] backdrop-blur-xl">
             <div className="flex items-center justify-between pb-4 border-b border-[#f0f4ee] mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#e8f2e9] text-[#1e3a24] flex items-center justify-center">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                    <path d="M2 17l10 5 10-5" />
-                    <path d="M2 12l10 5 10-5" />
-                  </svg>
-                </div>
+                <DuolingoCatIcon className="w-10 h-10 rounded-2xl shadow-xs shrink-0" />
                 <div>
                   <h2 className="text-base font-bold text-[#1b2b20] font-['Sora',sans-serif]">
                     AI Evaluation & Groq API Engine
@@ -1003,29 +992,31 @@ export default function SettingsPage() {
                         </span>
                       </div>
                     ) : (
-                      <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+                      <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
-                            <span className="font-semibold">Model unavailable: </span>
+                            <span className="font-semibold">Model status: </span>
                             <span className="text-rose-700">{modelHealth.error}</span>
                           </div>
-                          {availableModels.some(m => m.id.toLowerCase().includes('qwen')) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const rec = availableModels.find(m => m.id.toLowerCase().includes('qwen') && m.supports_vision) ||
-                                            availableModels.find(m => m.id.toLowerCase().includes('qwen')) ||
-                                            availableModels[0];
-                                if (rec) {
-                                  setSelectedModel(rec.id);
-                                  localStorage.setItem('writeabout_model', rec.id);
-                                }
-                              }}
-                              className="text-xs font-semibold text-rose-900 underline hover:text-rose-950 shrink-0 cursor-pointer"
-                            >
-                              Use recommended
-                            </button>
-                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          <span className="text-[11px] text-slate-500 font-medium">Choose alternative model:</span>
+                          {availableModels
+                            .filter(m => m.id !== selectedModel)
+                            .slice(0, 3)
+                            .map(m => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedModel(m.id);
+                                  localStorage.setItem('writeabout_model', m.id);
+                                }}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                              >
+                                {m.id.split('/').pop()}
+                              </button>
+                            ))}
                         </div>
                       </div>
                     )}
@@ -1046,7 +1037,6 @@ export default function SettingsPage() {
                     className="text-[11px] font-bold text-[#059669] hover:text-[#047857] inline-flex items-center gap-1 transition-colors"
                   >
                     <span>Get Free Key on Groq.com</span>
-                    <span>↗</span>
                   </a>
                 </div>
                 <div className="relative">

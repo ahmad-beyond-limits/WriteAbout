@@ -86,6 +86,12 @@ export async function POST(request: Request) {
         }
       } catch {}
 
+      if (probeRes.status === 429) {
+        errorMsg = `Rate limit exceeded on Groq for "${model}". Please select another model (e.g. Llama 3.3 70B or Llama 3.1 8B).`;
+      } else if (probeRes.status === 404) {
+        errorMsg = `Model "${model}" is deprecated or not available on Groq.`;
+      }
+
       return NextResponse.json({
         success: true,
         valid: false,

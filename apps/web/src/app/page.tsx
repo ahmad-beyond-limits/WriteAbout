@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { DuolingoCatIcon } from '@/components/DuolingoCatIcon';
 
 export default function LandingPage() {
   const [user, setUser] = useState<{ id: number; username: string; firstName?: string; lastName?: string; role?: string } | null>(null);
@@ -46,13 +47,7 @@ export default function LandingPage() {
         <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 rounded-2xl bg-white/85 border border-[#e1e9df] shadow-[0_4px_24px_rgba(27,43,32,0.03)] backdrop-blur-xl">
           
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-[#28442c] flex items-center justify-center text-[#e8f2e9] font-bold text-sm shadow-xs transition-transform group-hover:scale-105 shrink-0">
-              <svg className="w-4 h-4 text-[#a3d9ad]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
+            <DuolingoCatIcon className="w-8 h-8 rounded-xl shadow-xs transition-transform group-hover:scale-105 shrink-0" />
             <span className="text-base sm:text-lg font-bold tracking-tight text-[#1b2b20]">
               duoprep
             </span>

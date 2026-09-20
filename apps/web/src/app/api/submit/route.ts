@@ -48,134 +48,145 @@ Assess the candidate's written response and return a JSON object with:
 Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     }
 
-    // Default to Qwen model if not specified
-    const modelName = model || process.env.GROQ_MODEL_NAME || 'qwen/qwen-2.5-72b-instruct';
+    // Default to Qwen or Llama model
+    const primaryModel = model || process.env.GROQ_MODEL_NAME || 'qwen/qwen3.8-27b';
 
-    // Determine if the selected model is vision-capable
-    const isLikelyVisionModel = (
-      modelName.toLowerCase().includes('vision') ||
-      modelName.toLowerCase().includes('vl') ||
-      modelName.toLowerCase().includes('qwen3.8') ||
-      modelName.toLowerCase().includes('llava')
-    );
+    // Build ordered list of candidate models for resilient fallback execution
+    const candidateModels = Array.from(
+      new Set([
+        primaryModel,
+        'llama-3.3-70b-versatile',
+        'llama-3.1-8b-instant',
+        'qwen/qwen3.8-27b',
+        'meta-llama/llama-3.2-11b-vision-preview',
+        'gemma2-9b-it'
+      ])
+    ).filter(Boolean);
 
-    let directImageUrl = '';
-    if (resolvedImage && isLikelyVisionModel && resolvedImage.startsWith('http')) {
-      try {
-        const headRes = await fetch(resolvedImage, { method: 'HEAD', redirect: 'follow' });
-        directImageUrl = headRes.url || resolvedImage;
-      } catch {
-        directImageUrl = resolvedImage;
+    let rawResponse = '';
+    let successfulModel = primaryModel;
+    let lastStatus = 500;
+    let lastErrorMsg = 'Failed to evaluate response.';
+
+    for (const currentModel of candidateModels) {
+      const isLikelyVision = (
+        currentModel.toLowerCase().includes('vision') ||
+        currentModel.toLowerCase().includes('vl') ||
+        currentModel.toLowerCase().includes('qwen3.8') ||
+        currentModel.toLowerCase().includes('llava')
+      );
+
+      let directImageUrl = '';
+      if (resolvedImage && isLikelyVision && resolvedImage.startsWith('http')) {
+        try {
+          const headRes = await fetch(resolvedImage, { method: 'HEAD', redirect: 'follow' });
+          directImageUrl = headRes.url || resolvedImage;
+        } catch {
+          directImageUrl = resolvedImage;
+        }
       }
-    }
 
-    const buildMessages = (useVision: boolean) => {
-      if (useVision && directImageUrl) {
+      const buildMessages = (useVision: boolean) => {
+        if (useVision && directImageUrl) {
+          return [
+            { role: 'system', content: systemPrompt },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Please evaluate this candidate's description according to the image and DET scoring rubric:\n\n"${text}"`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: directImageUrl
+                  }
+                }
+              ]
+            }
+          ];
+        }
         return [
           { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Please evaluate this candidate's description according to the image and DET scoring rubric:\n\n"${text}"`
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: directImageUrl
-                }
-              }
-            ]
-          }
+          { role: 'user', content: `Please evaluate this description of the image:\n\n"${text}"` }
         ];
-      }
-      return [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Please evaluate this description of the image:\n\n"${text}"` }
-      ];
-    };
+      };
 
-    // ── 1. Primary Request to Groq using User's API Key ──
-    let groqRes: Response;
-    try {
-      groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${groqKey.trim()}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages: buildMessages(isLikelyVisionModel),
-          temperature: 0.2,
-          max_completion_tokens: 2048
-        })
-      });
-
-      // If vision request failed due to media/modality error (e.g. 400), gracefully retry with text fallback
-      if (!groqRes.ok && isLikelyVisionModel && groqRes.status === 400) {
-        const errCloned = await groqRes.clone().text();
-        if (errCloned.includes('media') || errCloned.includes('image') || errCloned.includes('modality') || errCloned.includes('vision')) {
-          console.warn('Vision payload rejected by Groq, retrying with language-only payload...');
-          groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${groqKey.trim()}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: modelName,
-              messages: buildMessages(false),
-              temperature: 0.2,
-              max_completion_tokens: 2048
-            })
-          });
-        }
-      }
-    } catch (networkErr: any) {
-      console.error('Groq fetch network error:', networkErr);
-      return NextResponse.json({
-        success: false,
-        error: `Network error connecting to Groq AI (${networkErr?.message || 'Connection refused'}). Check your internet connection.`
-      }, { status: 502 });
-    }
-
-    if (!groqRes.ok) {
-      const errorText = await groqRes.text();
-      console.error('Groq API Error Status:', groqRes.status, 'Body:', errorText);
-
-      let parsedErrorMessage = `Groq API Error (${groqRes.status})`;
       try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error?.message) {
-          parsedErrorMessage = errorJson.error.message;
+        let groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey.trim()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            messages: buildMessages(isLikelyVision),
+            temperature: 0.2,
+            max_completion_tokens: 2048
+          })
+        });
+
+        // If vision request failed due to media/modality error (e.g. 400), gracefully retry with text fallback
+        if (!groqRes.ok && isLikelyVision && groqRes.status === 400) {
+          const errCloned = await groqRes.clone().text();
+          if (errCloned.includes('media') || errCloned.includes('image') || errCloned.includes('modality') || errCloned.includes('vision')) {
+            console.warn(`Vision payload rejected on ${currentModel}, retrying with language-only payload...`);
+            groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${groqKey.trim()}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: currentModel,
+                messages: buildMessages(false),
+                temperature: 0.2,
+                max_completion_tokens: 2048
+              })
+            });
+          }
         }
-      } catch {}
 
-      if (groqRes.status === 401) {
-        parsedErrorMessage = 'Invalid Groq API Key. Please verify your API key in Settings or API Key section.';
-      } else if (groqRes.status === 429) {
-        parsedErrorMessage = `Rate limit exceeded for model "${modelName}". Please wait a moment or choose another model.`;
-      } else if (groqRes.status === 404) {
-        parsedErrorMessage = `Model "${modelName}" was not found or is currently unavailable on Groq.`;
+        if (groqRes.ok) {
+          const groqData = await groqRes.json();
+          const content = groqData.choices?.[0]?.message?.content;
+          if (content && content.trim()) {
+            rawResponse = content;
+            successfulModel = currentModel;
+            break;
+          }
+        } else {
+          lastStatus = groqRes.status;
+          const errorText = await groqRes.text();
+          try {
+            const errJson = JSON.parse(errorText);
+            lastErrorMsg = errJson.error?.message || `Groq error ${groqRes.status}`;
+          } catch {
+            lastErrorMsg = errorText;
+          }
+          console.warn(`Groq model ${currentModel} returned ${groqRes.status} (${lastErrorMsg}). Retrying next fallback model...`);
+
+          // If API Key is fundamentally invalid (401), stopping retries since other models will also fail with 401
+          if (groqRes.status === 401) {
+            return NextResponse.json({
+              success: false,
+              error: 'Invalid Groq API Key. Please check your API key in Settings.'
+            }, { status: 401 });
+          }
+        }
+      } catch (networkErr: any) {
+        lastErrorMsg = networkErr?.message || 'Network error';
+        console.warn(`Network error for model ${currentModel}: ${lastErrorMsg}`);
       }
-
-      return NextResponse.json({
-        success: false,
-        error: parsedErrorMessage,
-        details: errorText
-      }, { status: groqRes.status || 500 });
     }
-
-    const groqData = await groqRes.json();
-    let rawResponse = groqData.choices?.[0]?.message?.content;
 
     if (!rawResponse || !rawResponse.trim()) {
       return NextResponse.json({
         success: false,
-        error: `The AI model (${modelName}) returned an empty response. Please retry.`
-      }, { status: 502 });
+        error: `Could not evaluate with any available AI model: ${lastErrorMsg}. Please check your Groq API key.`
+      }, { status: lastStatus || 500 });
     }
 
     // Parse JSON from LLM
@@ -199,7 +210,7 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     if (!parsedData || (!parsedData.rating && !parsedData.feedback)) {
       return NextResponse.json({
         success: false,
-        error: `Failed to extract evaluation rating from model (${modelName}). Response format was unrecognized.`
+        error: `Failed to extract evaluation rating from model (${successfulModel}). Response format was unrecognized.`
       }, { status: 422 });
     }
 
@@ -295,7 +306,7 @@ Return ONLY valid JSON:
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: modelName,
+            model: successfulModel,
             messages: [{ role: 'user', content: envPrompt }],
             temperature: 0.1,
             max_completion_tokens: 500
@@ -326,6 +337,7 @@ Return ONLY valid JSON:
       wordCount,
       rate,
       feedback,
+      modelUsed: successfulModel,
       totalSentences: levelAnalysis.totalSentences,
       levels: {
         level1: levelAnalysis.level1,

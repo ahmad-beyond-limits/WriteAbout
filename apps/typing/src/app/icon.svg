@@ -1,6 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="8" fill="#1e3a24" />
-  <path d="M16 5L4 11l12 6 12-6-12-6z" fill="none" stroke="#a3d9ad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M4 21l12 6 12-6" fill="none" stroke="#a3d9ad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M4 16l12 6 12-6" fill="none" stroke="#a3d9ad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <!-- Rounded Square Container Background -->
+  <rect width="64" height="64" rx="16" fill="#1b3820" />
+  
+  <!-- Subtle Top-Left Ambient Sheen -->
+  <path d="M 0 16 C 0 7.16 7.16 0 16 0 L 48 0 C 56.84 0 64 7.16 64 16 L 64 24 L 0 44 Z" fill="white" opacity="0.04" />
+
+  <!-- Left Ear -->
+  <path d="M 13 32 L 16 11 C 16.5 9 18.5 8.5 20 10.5 L 30 23 Z" fill="#22c55e" stroke="#15803d" stroke-width="1.2" stroke-linejoin="round" />
+  <path d="M 17 26 L 19 14 C 19.3 13 20.2 13 20.8 14 L 26.5 22 Z" fill="#fca5a5" />
+
+  <!-- Right Ear -->
+  <path d="M 51 32 L 48 11 C 47.5 9 45.5 8.5 44 10.5 L 34 23 Z" fill="#22c55e" stroke="#15803d" stroke-width="1.2" stroke-linejoin="round" />
+  <path d="M 47 26 L 45 14 C 44.7 13 43.8 13 43.2 14 L 37.5 22 Z" fill="#fca5a5" />
+
+  <!-- Cat Head Base -->
+  <ellipse cx="32" cy="35" rx="19.5" ry="17.5" fill="#22c55e" stroke="#15803d" stroke-width="1.2" />
+
+  <!-- Muzzle / Cheeks Accent -->
+  <ellipse cx="32" cy="41" rx="12.5" ry="9.5" fill="#4ade80" />
+
+  <!-- Duolingo Big Expressive Eyes -->
+  <!-- Left Eye -->
+  <ellipse cx="23" cy="32" rx="6.2" ry="6.6" fill="#ffffff" />
+  <ellipse cx="24" cy="32" rx="4" ry="4.4" fill="#0f2915" />
+  <circle cx="22.2" cy="29.8" r="1.6" fill="#ffffff" />
+  <circle cx="25.4" cy="33.8" r="0.75" fill="#ffffff" />
+
+  <!-- Right Eye -->
+  <ellipse cx="41" cy="32" rx="6.2" ry="6.6" fill="#ffffff" />
+  <ellipse cx="40" cy="32" rx="4" ry="4.4" fill="#0f2915" />
+  <circle cx="38.8" cy="29.8" r="1.6" fill="#ffffff" />
+  <circle cx="42.2" cy="33.8" r="0.75" fill="#ffffff" />
+
+  <!-- Rosy Blush Cheeks -->
+  <ellipse cx="16.5" cy="38" rx="3.2" ry="2" fill="#fb7185" opacity="0.85" />
+  <ellipse cx="47.5" cy="38" rx="3.2" ry="2" fill="#fb7185" opacity="0.85" />
+
+  <!-- Whiskers -->
+  <path d="M 8.5 35.5 L 14.5 37 M 8 39.5 L 14.5 39.5" stroke="#bbf7d0" stroke-width="1.3" stroke-linecap="round" />
+  <path d="M 55.5 35.5 L 49.5 37 M 56 39.5 L 49.5 39.5" stroke="#bbf7d0" stroke-width="1.3" stroke-linecap="round" />
+
+  <!-- Little Golden Nose -->
+  <path d="M 30.5 38.5 Q 32 37.2 33.5 38.5 Q 32 40.5 30.5 38.5 Z" fill="#fbbf24" stroke="#d97706" stroke-width="0.5" />
+
+  <!-- Cute Kitten Smile -->
+  <path d="M 28 41.5 Q 30.2 44.5 32 42 Q 33.8 44.5 36 41.5" fill="none" stroke="#0f2915" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Golden Fountain Pen -->
+  <!-- Pen Shadow -->
+  <path d="M 54 49 L 41 56 L 33 58 L 35 51 L 49 44 Z" fill="#061208" opacity="0.45" />
+
+  <!-- Pen Barrel -->
+  <path d="M 53 45 L 42 52.5 L 38 46.5 L 49 39 Z" fill="#f59e0b" stroke="#d97706" stroke-width="0.7" stroke-linejoin="round" />
+  <path d="M 53 45 L 49 39 L 52.5 36 L 56.5 42 Z" fill="#fbbf24" />
+
+  <!-- Pen Grip -->
+  <path d="M 42 52.5 L 39 54.5 L 35 48.5 L 38 46.5 Z" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.5" stroke-linejoin="round" />
+
+  <!-- Pen Nib Tip -->
+  <path d="M 39 54.5 L 30 60 L 35 48.5 Z" fill="#ffffff" stroke="#94a3b8" stroke-width="0.6" stroke-linejoin="round" />
+  <circle cx="34.5" cy="53.5" r="0.75" fill="#0f2915" />
+  <path d="M 34.5 53.5 L 30 60" stroke="#0f2915" stroke-width="0.6" />
+
+  <!-- Ink Sparkle -->
+  <circle cx="28.5" cy="61" r="1.3" fill="#86efac" />
+  <path d="M 28.5 58 L 28.5 64 M 25.5 61 L 31.5 61" stroke="#ffffff" stroke-width="0.9" stroke-linecap="round" />
+
+  <!-- Cute Cat Paw -->
+  <ellipse cx="44" cy="49" rx="5.2" ry="4.2" fill="#4ade80" stroke="#15803d" stroke-width="1.1" />
+  <!-- Paw Pads -->
+  <circle cx="41.8" cy="48" r="1.1" fill="#22c55e" />
+  <circle cx="44.2" cy="47.2" r="1.1" fill="#22c55e" />
+  <circle cx="46.5" cy="48.8" r="1.1" fill="#22c55e" />
 </svg>

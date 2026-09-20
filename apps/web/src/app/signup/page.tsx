@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { DuolingoCatIcon } from '@/components/DuolingoCatIcon';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -112,13 +113,7 @@ export default function SignupPage() {
         {/* Brand */}
         <div className="text-center mb-7">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-3 group">
-            <div className="w-8 h-8 rounded-xl bg-[#28442c] flex items-center justify-center text-[#e8f2e9] font-bold text-sm shadow-xs transition-transform group-hover:scale-105">
-              <svg className="w-4 h-4 text-[#a3d9ad]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            </div>
+            <DuolingoCatIcon className="w-8 h-8 rounded-xl shadow-xs transition-transform group-hover:scale-105 shrink-0" />
             <span className="text-lg font-bold tracking-tight text-[#1b2b20]">
               duoprep
             </span>
