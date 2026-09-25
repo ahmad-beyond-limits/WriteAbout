@@ -792,6 +792,8 @@ export default function WriteAboutApp() {
                 !id.includes('embedding') &&
                 !id.includes('distil-whisper') &&
                 !id.includes('orpheus') &&
+                !id.includes('gemma2-9b-it') &&
+                !id.includes('gemma-7b') &&
                 m.active !== false
               );
             });

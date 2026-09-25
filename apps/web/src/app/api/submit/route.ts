@@ -48,18 +48,15 @@ Assess the candidate's written response and return a JSON object with:
 Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     }
 
-    // Default to Qwen or Llama model
-    const primaryModel = model || process.env.GROQ_MODEL_NAME || 'qwen/qwen3.8-27b';
+    // Default to Llama 3.3 70B or environment model
+    const primaryModel = model || process.env.GROQ_MODEL_NAME || 'llama-3.3-70b-versatile';
 
-    // Build ordered list of candidate models for resilient fallback execution
+    // Build ordered list of candidate models for resilient fallback execution (active Groq production models only)
     const candidateModels = Array.from(
       new Set([
         primaryModel,
         'llama-3.3-70b-versatile',
-        'llama-3.1-8b-instant',
-        'qwen/qwen3.8-27b',
-        'meta-llama/llama-3.2-11b-vision-preview',
-        'gemma2-9b-it'
+        'llama-3.1-8b-instant'
       ])
     ).filter(Boolean);
 
@@ -67,12 +64,13 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     let successfulModel = primaryModel;
     let lastStatus = 500;
     let lastErrorMsg = 'Failed to evaluate response.';
+    let primaryModelError = '';
+    let primaryModelStatus = 500;
 
     for (const currentModel of candidateModels) {
       const isLikelyVision = (
         currentModel.toLowerCase().includes('vision') ||
         currentModel.toLowerCase().includes('vl') ||
-        currentModel.toLowerCase().includes('qwen3.8') ||
         currentModel.toLowerCase().includes('llava')
       );
 
@@ -166,6 +164,12 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
           } catch {
             lastErrorMsg = errorText;
           }
+
+          if (currentModel === primaryModel) {
+            primaryModelStatus = groqRes.status;
+            primaryModelError = lastErrorMsg;
+          }
+
           console.warn(`Groq model ${currentModel} returned ${groqRes.status} (${lastErrorMsg}). Retrying next fallback model...`);
 
           // If API Key is fundamentally invalid (401), stopping retries since other models will also fail with 401
@@ -178,15 +182,27 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
         }
       } catch (networkErr: any) {
         lastErrorMsg = networkErr?.message || 'Network error';
+        if (currentModel === primaryModel) {
+          primaryModelError = lastErrorMsg;
+        }
         console.warn(`Network error for model ${currentModel}: ${lastErrorMsg}`);
       }
     }
 
     if (!rawResponse || !rawResponse.trim()) {
+      const displayError = primaryModelError || lastErrorMsg;
+      let userFriendlyError = displayError;
+      if (primaryModelStatus === 429 || displayError.toLowerCase().includes('rate limit')) {
+        userFriendlyError = `Rate limit exceeded for model "${primaryModel}". Please wait a moment or select another available model.`;
+      } else if (primaryModelStatus === 404 || displayError.toLowerCase().includes('decommissioned') || displayError.toLowerCase().includes('does not exist')) {
+        userFriendlyError = `Model "${primaryModel}" is unavailable or not recognized by Groq. Please select an active model from the dropdown.`;
+      }
+
       return NextResponse.json({
         success: false,
-        error: `Could not evaluate with any available AI model: ${lastErrorMsg}. Please check your Groq API key.`
-      }, { status: lastStatus || 500 });
+        error: userFriendlyError,
+        modelAttempted: primaryModel
+      }, { status: primaryModelStatus || lastStatus || 500 });
     }
 
     // Parse JSON from LLM
