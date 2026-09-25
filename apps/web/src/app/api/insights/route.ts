@@ -66,11 +66,34 @@ export async function GET(request: Request) {
       LIMIT 30;
     `, [userId, filter]);
 
+    const formattedHistory = historyResult.rows.map((row: any) => {
+      let rawFb = row.feedback || '';
+      let parsedFb = rawFb;
+      let recDesc = '';
+      let imgInsights: string[] = [];
+
+      if (typeof rawFb === 'string' && rawFb.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(rawFb);
+          parsedFb = parsed.feedback || parsedFb;
+          recDesc = parsed.recommendedDescription || parsed.recommended_description || '';
+          imgInsights = Array.isArray(parsed.imageInsights) ? parsed.imageInsights : Array.isArray(parsed.image_insights) ? parsed.image_insights : [];
+        } catch {}
+      }
+
+      return {
+        ...row,
+        feedback: parsedFb,
+        recommendedDescription: recDesc,
+        imageInsights: imgInsights
+      };
+    });
+
     return NextResponse.json({
       success: true,
       apiUsage: apiUsageResult.rows,
       performance: performanceData,
-      history: historyResult.rows
+      history: formattedHistory
     });
   } catch (error) {
     console.error('Error fetching insights:', error);

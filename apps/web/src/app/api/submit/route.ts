@@ -190,7 +190,15 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
     }
 
     // Parse JSON from LLM
-    let parsedData: { rating?: string; feedback?: string } | null = null;
+    let parsedData: {
+      rating?: string;
+      feedback?: string;
+      recommended_description?: string;
+      recommendedDescription?: string;
+      image_insights?: string[];
+      imageInsights?: string[];
+    } | null = null;
+
     try {
       let cleanContent = rawResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       cleanContent = cleanContent.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -199,12 +207,13 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
       console.warn('Direct JSON parse failed, attempting regex extraction from:', rawResponse);
       const ratingMatch = rawResponse.match(/"rating"\s*:\s*"([^"]+)"/i);
       const feedbackMatch = rawResponse.match(/"feedback"\s*:\s*"([\s\S]*?)(?:"|$)/i);
-      if (ratingMatch || feedbackMatch) {
-        parsedData = {
-          rating: ratingMatch ? ratingMatch[1] : undefined,
-          feedback: feedbackMatch ? feedbackMatch[1].trim().replace(/"\s*}\s*$/, '').replace(/"$/, '').trim() : undefined
-        };
-      }
+      const recMatch = rawResponse.match(/"(?:recommended_description|recommendedDescription)"\s*:\s*"([\s\S]*?)(?:"|$)/i);
+      
+      parsedData = {
+        rating: ratingMatch ? ratingMatch[1] : undefined,
+        feedback: feedbackMatch ? feedbackMatch[1].trim().replace(/"\s*}\s*$/, '').replace(/"$/, '').trim() : undefined,
+        recommendedDescription: recMatch ? recMatch[1].trim().replace(/"\s*}\s*$/, '').replace(/"$/, '').trim() : undefined
+      };
     }
 
     if (!parsedData || (!parsedData.rating && !parsedData.feedback)) {
@@ -220,13 +229,27 @@ Return ONLY JSON: { "rating": "...", "feedback": "..." }`;
       ? parsedData.rating.toLowerCase()
       : 'medium';
     const feedback = parsedData.feedback || 'Evaluation completed without specific feedback comments.';
+    const recommendedDescription = parsedData.recommended_description || parsedData.recommendedDescription || '';
+    const imageInsights = Array.isArray(parsedData.image_insights)
+      ? parsedData.image_insights
+      : Array.isArray(parsedData.imageInsights)
+      ? parsedData.imageInsights
+      : [];
+
     const wordCount = text.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+
+    // Persist structured feedback with recommended description and image insights
+    const dbFeedbackPayload = JSON.stringify({
+      feedback,
+      recommendedDescription,
+      imageInsights
+    });
 
     // Insert into Postgres only when evaluation genuinely succeeded
     try {
       await pool.query(
         'INSERT INTO practices (image_url, text, rate, feedback, user_id) VALUES ($1, $2, $3, $4, $5)',
-        [resolvedImage, text, rate, feedback, userId]
+        [resolvedImage, text, rate, dbFeedbackPayload, userId]
       );
 
       await pool.query(
@@ -337,6 +360,8 @@ Return ONLY valid JSON:
       wordCount,
       rate,
       feedback,
+      recommendedDescription,
+      imageInsights,
       modelUsed: successfulModel,
       totalSentences: levelAnalysis.totalSentences,
       levels: {

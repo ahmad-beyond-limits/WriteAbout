@@ -9,7 +9,10 @@ type AnalysisResult = {
   wordCount: number;
   rate: string;
   feedback: string;
+  recommendedDescription?: string;
+  imageInsights?: string[];
   totalSentences?: number;
+  modelUsed?: string;
   levels?: {
     level1: number;
     level2: number;
@@ -56,6 +59,7 @@ function InsightsScreen({
   const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState<'week' | 'month'>('week');
   const [reviewItem, setReviewItem] = useState<any>(null);
+  const [reviewTab, setReviewTab] = useState<'evaluation' | 'recommendation'>('evaluation');
 
   useEffect(() => {
     fetch(`/api/insights?filter=${filter}&userId=${userId}`)
@@ -541,48 +545,117 @@ function InsightsScreen({
                 </div>
               </div>
 
-              {/* Middle 2 Columns */}
-              <div className="analysis-columns">
-                {/* Left: 5-Bar Segmented Spectrum */}
-                <div className="segmented-viz-container">
-                  {[
-                    { label: 'Level 1: Basic Writing', score: l1 },
-                    { label: 'Level 2: Image Context', score: l2 },
-                    { label: 'Level 3: Descriptive Adjectives', score: l3 },
-                    { label: 'Level 4: Syntax & Flow', score: l4 },
-                  ].map((item, rowIdx) => {
-                    const totalPills = 5;
-                    const activePills = Math.min(5, Math.max(1, item.score));
-
-                    return (
-                      <div key={rowIdx} className="segmented-row">
-                        <div className="segmented-header">
-                          <span className="segmented-title">{item.label}</span>
-                          <span className="segmented-score">{item.score} / 5</span>
-                        </div>
-                        <div className="segmented-track">
-                          {Array.from({ length: totalPills }).map((_, pillIdx) => (
-                            <div
-                              key={pillIdx}
-                              className={`segmented-pill ${pillIdx < activePills ? 'active' : 'inactive'}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Right: Submitted Text & Detailed Feedback */}
-                <div className="analysis-feedback-col">
-                  {reviewItem.text && (
-                    <div style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', borderLeft: '3px solid #1e3a24', fontSize: '12.5px', color: '#1e293b', lineHeight: 1.5 }}>
-                      "{reviewItem.text}"
-                    </div>
-                  )}
-                  <p className="analysis-feedback-body">{reviewItem.feedback}</p>
-                </div>
+              {/* Tab Navigation: Clearly Separating Score Evaluation from Description Recommendation */}
+              <div className="analysis-tabs-bar">
+                <button
+                  type="button"
+                  className={`analysis-tab-btn ${reviewTab === 'evaluation' ? 'active' : ''}`}
+                  onClick={() => setReviewTab('evaluation')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                  <span>1. Evaluation & Score Breakdown</span>
+                </button>
+                <button
+                  type="button"
+                  className={`analysis-tab-btn ${reviewTab === 'recommendation' ? 'active' : ''}`}
+                  onClick={() => setReviewTab('recommendation')}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  <span>2. Description Recommendation & Insights</span>
+                </button>
               </div>
+
+              {/* View 1: Evaluation & Score Breakdown */}
+              {reviewTab === 'evaluation' && (
+                <div className="analysis-columns">
+                  {/* Left: 4-Level Segmented Skill Spectrum */}
+                  <div className="segmented-viz-container">
+                    {[
+                      { label: 'Level 1: Basic Writing', score: l1 },
+                      { label: 'Level 2: Image Context', score: l2 },
+                      { label: 'Level 3: Descriptive Adjectives', score: l3 },
+                      { label: 'Level 4: Syntax & Flow', score: l4 },
+                    ].map((item, rowIdx) => {
+                      const totalPills = 5;
+                      const activePills = Math.min(5, Math.max(1, item.score));
+
+                      return (
+                        <div key={rowIdx} className="segmented-row">
+                          <div className="segmented-header">
+                            <span className="segmented-title">{item.label}</span>
+                            <span className="segmented-score">{item.score} / 5</span>
+                          </div>
+                          <div className="segmented-track">
+                            {Array.from({ length: totalPills }).map((_, pillIdx) => (
+                              <div
+                                key={pillIdx}
+                                className={`segmented-pill ${pillIdx < activePills ? 'active' : 'inactive'}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Right: Submitted Text & Diagnostic Critique */}
+                  <div className="analysis-feedback-col">
+                    {reviewItem.text && (
+                      <div className="analysis-user-text-box">
+                        <span className="analysis-section-label">Your Submitted Response:</span>
+                        <p className="analysis-user-text-content">"{reviewItem.text}"</p>
+                      </div>
+                    )}
+                    <div>
+                      <span className="analysis-section-label">Evaluator Diagnostic Feedback:</span>
+                      <p className="analysis-feedback-body">{reviewItem.feedback}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* View 2: Description Recommendation & Image Insights */}
+              {reviewTab === 'recommendation' && (
+                <div className="analysis-columns">
+                  {/* Left: Exemplary Recommended Description */}
+                  <div className="analysis-recommendation-card">
+                    <div className="analysis-recommendation-badge">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                      <span>Exemplary Model Description (DET C1+)</span>
+                    </div>
+                    <p className="analysis-recommendation-text">
+                      {reviewItem.recommendedDescription || 'In this photograph, the scene unfolds with vibrant clarity, showcasing the subjects positioned harmoniously within their surroundings. The lighting accentuates subtle textures, creating an immersive sense of atmosphere and depth.'}
+                    </p>
+                  </div>
+
+                  {/* Right: Image Insights & High-Scoring Vocabulary */}
+                  <div className="analysis-insights-card">
+                    <div className="analysis-insights-title">
+                      Image Observations & Recommended Vocabulary
+                    </div>
+                    <ul className="analysis-insights-list">
+                      {reviewItem.imageInsights && reviewItem.imageInsights.length > 0 ? (
+                        reviewItem.imageInsights.map((ins: string, idx: number) => (
+                          <li key={idx}>{ins}</li>
+                        ))
+                      ) : (
+                        <>
+                          <li><strong>Main Subject:</strong> Accurately capture foreground entities and focal activities.</li>
+                          <li><strong>Setting & Context:</strong> Describe background details, atmosphere, and spatial layout.</li>
+                          <li><strong>Descriptive Lexicon:</strong> Employ evocative adjectives and precise nouns to elevate imagery.</li>
+                        </>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              )}
 
               {/* Bottom Action Buttons */}
               <div className="analysis-actions-right">
@@ -654,6 +727,7 @@ export default function WriteAboutApp() {
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult>(null);
+  const [analysisTab, setAnalysisTab] = useState<'evaluation' | 'recommendation'>('evaluation');
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [capsLock, setCapsLock] = useState(false);
   const [showMobileNotice, setShowMobileNotice] = useState(false);
@@ -966,9 +1040,13 @@ export default function WriteAboutApp() {
           wordCount: resAnalysis.wordCount,
           rate: resAnalysis.rate,
           feedback: resAnalysis.feedback,
+          recommendedDescription: resAnalysis.recommendedDescription,
+          imageInsights: resAnalysis.imageInsights,
           totalSentences: resAnalysis.totalSentences,
-          levels: resAnalysis.levels
+          levels: resAnalysis.levels,
+          modelUsed: resAnalysis.modelUsed
         });
+        setAnalysisTab('evaluation');
         setEvaluationError(null);
       } else {
         const errorMsg = data.error || 'Evaluation failed. Please verify your Groq API key and selected model.';
@@ -1533,46 +1611,120 @@ export default function WriteAboutApp() {
             </div>
           </div>
 
-          {/* Middle 2 Columns: Left Segmented Skill Spectrum + Right Heading & Feedback */}
-          <div className="analysis-columns">
-            {/* Left: Clean Segmented Skill Spectrum */}
-            <div className="segmented-viz-container">
-              {[
-                { label: 'Level 1: Basic Writing', score: analysis?.levels?.level1 ?? 3 },
-                { label: 'Level 2: Image Context', score: analysis?.levels?.level2 ?? 3 },
-                { label: 'Level 3: Descriptive Adjectives', score: analysis?.levels?.level3 ?? 3 },
-                { label: 'Level 4: Syntax & Flow', score: analysis?.levels?.level4 ?? 3 },
-              ].map((item, rowIdx) => {
-                const totalPills = 5;
-                const activePills = Math.min(5, Math.max(1, Math.round(item.score)));
-
-                return (
-                  <div key={rowIdx} className="segmented-row">
-                    <div className="segmented-header">
-                      <span className="segmented-title">{item.label}</span>
-                      <span className="segmented-score">{item.score} / 5</span>
-                    </div>
-
-                    <div className="segmented-track">
-                      {Array.from({ length: totalPills }).map((_, pillIdx) => (
-                        <div
-                          key={pillIdx}
-                          className={`segmented-pill ${pillIdx < activePills ? 'active' : 'inactive'}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Right: Detailed Paragraph Feedback */}
-            <div className="analysis-feedback-col">
-              <p className="analysis-feedback-body">
-                {analysis?.feedback || 'Your description has been evaluated and recorded.'}
-              </p>
-            </div>
+          {/* Tab Navigation: Clearly Separating Score Evaluation from Description Recommendation */}
+          <div className="analysis-tabs-bar">
+            <button
+              type="button"
+              className={`analysis-tab-btn ${analysisTab === 'evaluation' ? 'active' : ''}`}
+              onClick={() => setAnalysisTab('evaluation')}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+              </svg>
+              <span>1. Evaluation & Score Breakdown</span>
+            </button>
+            <button
+              type="button"
+              className={`analysis-tab-btn ${analysisTab === 'recommendation' ? 'active' : ''}`}
+              onClick={() => setAnalysisTab('recommendation')}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span>2. Description Recommendation & Insights</span>
+            </button>
           </div>
+
+          {/* View 1: Evaluation & Score Breakdown */}
+          {analysisTab === 'evaluation' && (
+            <div className="analysis-columns">
+              {/* Left: Clean Segmented Skill Spectrum */}
+              <div className="segmented-viz-container">
+                {[
+                  { label: 'Level 1: Basic Writing', score: analysis?.levels?.level1 ?? 3 },
+                  { label: 'Level 2: Image Context', score: analysis?.levels?.level2 ?? 3 },
+                  { label: 'Level 3: Descriptive Adjectives', score: analysis?.levels?.level3 ?? 3 },
+                  { label: 'Level 4: Syntax & Flow', score: analysis?.levels?.level4 ?? 3 },
+                ].map((item, rowIdx) => {
+                  const totalPills = 5;
+                  const activePills = Math.min(5, Math.max(1, Math.round(item.score)));
+
+                  return (
+                    <div key={rowIdx} className="segmented-row">
+                      <div className="segmented-header">
+                        <span className="segmented-title">{item.label}</span>
+                        <span className="segmented-score">{item.score} / 5</span>
+                      </div>
+
+                      <div className="segmented-track">
+                        {Array.from({ length: totalPills }).map((_, pillIdx) => (
+                          <div
+                            key={pillIdx}
+                            className={`segmented-pill ${pillIdx < activePills ? 'active' : 'inactive'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right: Submitted Text & Diagnostic Feedback */}
+              <div className="analysis-feedback-col">
+                {text && (
+                  <div className="analysis-user-text-box">
+                    <span className="analysis-section-label">Your Submitted Response:</span>
+                    <p className="analysis-user-text-content">"{text}"</p>
+                  </div>
+                )}
+                <div>
+                  <span className="analysis-section-label">Evaluator Diagnostic Feedback:</span>
+                  <p className="analysis-feedback-body">
+                    {analysis?.feedback || 'Your description has been evaluated and recorded.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* View 2: Description Recommendation & Image Insights */}
+          {analysisTab === 'recommendation' && (
+            <div className="analysis-columns">
+              {/* Left: Exemplary Recommended Description */}
+              <div className="analysis-recommendation-card">
+                <div className="analysis-recommendation-badge">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  <span>Exemplary Model Description (DET C1+)</span>
+                </div>
+                <p className="analysis-recommendation-text">
+                  {analysis?.recommendedDescription || 'In this photograph, the scene unfolds with vibrant clarity, showcasing the subjects positioned harmoniously within their surroundings. The lighting accentuates subtle textures, creating an immersive sense of atmosphere and depth.'}
+                </p>
+              </div>
+
+              {/* Right: Image Insights & High-Scoring Vocabulary */}
+              <div className="analysis-insights-card">
+                <div className="analysis-insights-title">
+                  Image Observations & Recommended Vocabulary
+                </div>
+                <ul className="analysis-insights-list">
+                  {analysis?.imageInsights && analysis.imageInsights.length > 0 ? (
+                    analysis.imageInsights.map((ins: string, idx: number) => (
+                      <li key={idx}>{ins}</li>
+                    ))
+                  ) : (
+                    <>
+                      <li><strong>Main Subject:</strong> Accurately capture foreground entities and focal activities.</li>
+                      <li><strong>Setting & Context:</strong> Describe background details, atmosphere, and spatial layout.</li>
+                      <li><strong>Descriptive Lexicon:</strong> Employ evocative adjectives and precise nouns to elevate imagery.</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
 
           {/* Bottom Right Aligned Action Buttons */}
           <div className="analysis-actions-right">
